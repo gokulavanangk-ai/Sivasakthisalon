@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.production
+.env.development
+backend/.env
+frontend/.env
+
+# Logs
+*.log
+npm-debug.log*
+*.out.log
+*.err.log
+
+# Temp files
+*.tmp.js
+*.tmp
+
+# TypeScript build info
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# Uploads (local dev storage)
+backend/uploads/
+
+# Vite
+frontend/dist/
+
+# Test / coverage
+coverage/
+.vite/

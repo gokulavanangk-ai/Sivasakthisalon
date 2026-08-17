@@ -1,0 +1,75 @@
+import type { Request, Response } from 'express';
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import helmet from 'helmet';
+import { pinoHttp } from 'pino-http';
+import path from 'path';
+import { env } from './config/env';
+import { logger } from './config/logger';
+import { apiLimiter } from './middleware/rateLimiter';
+import { notFoundHandler, errorHandler } from './middleware/errorHandler';
+
+import authRoutes from './routes/auth.routes';
+import salonRoutes from './routes/salon.routes';
+import serviceRoutes from './routes/service.routes';
+import hairstyleRoutes from './routes/hairstyle.routes';
+import galleryRoutes from './routes/gallery.routes';
+import reviewRoutes from './routes/review.routes';
+import bookingRoutes from './routes/booking.routes';
+import businessHoursRoutes from './routes/businessHours.routes';
+import barberRoutes from './routes/barber.routes';
+import faqRoutes from './routes/faq.routes';
+import { UPLOAD_DIR } from './middleware/upload';
+
+const app = express();
+
+app.set('trust proxy', 1);
+
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+
+app.use(
+  cors({
+    origin: env.clientUrl.split(',').map((s) => s.trim()),
+    credentials: true,
+  }),
+);
+
+app.use(pinoHttp({ logger }));
+
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(cookieParser());
+
+app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
+
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({ success: true, message: 'ok', data: { status: 'up', time: new Date().toISOString() } });
+});
+
+// Selective rate limiting: skip the health endpoint.
+app.use(['/api'], (req, res, next) => {
+  if (req.path === '/health') return next();
+  return apiLimiter(req, res, next);
+});
+
+app.use('/api/auth', authRoutes);
+app.use('/api/salon', salonRoutes);
+app.use('/api/services', serviceRoutes);
+app.use('/api/hairstyles', hairstyleRoutes);
+app.use('/api/gallery', galleryRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/hours', businessHoursRoutes);
+app.use('/api/barbers', barberRoutes);
+app.use('/api/faqs', faqRoutes);
+
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+export { app };
+export { UPLOAD_DIR };
