@@ -14,6 +14,7 @@ import {
   removeUploadedMedia,
   sanitizePersistedUrl,
   externalUrlMediaType,
+  cleanPersistedUrl,
 } from '../services/mediaService';
 import { detectImageFormat, isUnsafeHost } from '../middleware/upload';
 import * as mediaServiceNS from '../services/mediaService';
@@ -405,5 +406,36 @@ describe('sanitizePersistedUrl (salon hero/about/offers/logo + quote image field
     expect(() => sanitizePersistedUrl('http://10.0.0.5/pic.jpg')).toThrow(ApiError);
     expect(() => sanitizePersistedUrl('/images/pic.jpg')).toThrow(ApiError);
     expect(() => sanitizePersistedUrl('https://192.168.1.10/pic.jpg')).toThrow(ApiError);
+  });
+});
+
+describe('cleanPersistedUrl (read-path self-heal)', () => {
+  it('clears stale localhost / /uploads / private / blob / data / file references', () => {
+    expect(cleanPersistedUrl('http://localhost:5000/uploads/media-1.png')).toBe('');
+    expect(cleanPersistedUrl('http://127.0.0.1/x.png')).toBe('');
+    expect(cleanPersistedUrl('https://10.0.0.5/x.png')).toBe('');
+    expect(cleanPersistedUrl('blob:http://localhost:5173/uuid')).toBe('');
+    expect(cleanPersistedUrl('data:image/png;base64,abc')).toBe('');
+    expect(cleanPersistedUrl('file:///C:/a.png')).toBe('');
+    expect(cleanPersistedUrl('C:\\Users\\x\\pic.jpg')).toBe('');
+  });
+
+  it('preserves safe Cloudinary and external public URLs', () => {
+    expect(cleanPersistedUrl('https://res.cloudinary.com/x/image/upload/v1/poster.webp')).toBe(
+      'https://res.cloudinary.com/x/image/upload/v1/poster.webp',
+    );
+    expect(cleanPersistedUrl('https://www.pexels.com/download/video/4177953/')).toBe(
+      'https://www.pexels.com/download/video/4177953/',
+    );
+    expect(cleanPersistedUrl('https://images.pexels.com/photos/1/hero.jpg')).toBe(
+      'https://images.pexels.com/photos/1/hero.jpg',
+    );
+  });
+
+  it('treats empty / undefined as cleared (no throw)', () => {
+    expect(cleanPersistedUrl('')).toBe('');
+    expect(cleanPersistedUrl(undefined)).toBe('');
+    expect(cleanPersistedUrl('   ')).toBe('');
+    expect(cleanPersistedUrl(null)).toBe('');
   });
 });

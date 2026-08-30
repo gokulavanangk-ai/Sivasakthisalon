@@ -43,7 +43,7 @@ describe('syncHeroMedia', () => {
     expect(s.hero.videoUrl).toBe('https://example.com/new.mp4');
   });
 
-  it('syncs legacy videoUrl when a structured video is set', () => {
+  it('never surfaces a stale localhost /uploads hero reference (self-heals on read)', () => {
     const s = makeSettings({
       videoUrl: '',
       posterUrl: '',
@@ -51,6 +51,20 @@ describe('syncHeroMedia', () => {
       media: { mediaType: 'video', sourceType: 'upload', url: 'http://localhost:5000/uploads/media-1.mp4', posterUrl: '', publicId: 'media-1.mp4' },
     });
     syncHeroMedia(s as never);
-    expect(s.hero.videoUrl).toBe('http://localhost:5000/uploads/media-1.mp4');
+    expect(s.hero.videoUrl).toBe('');
+    expect(s.hero.media.url).toBe('');
+    expect(s.hero.media.publicId).toBe('');
+  });
+
+  it('keeps a safe Cloudinary/external hero URL untouched', () => {
+    const s = makeSettings({
+      videoUrl: 'https://www.pexels.com/download/video/4177953/',
+      posterUrl: 'https://res.cloudinary.com/x/image/upload/v1/poster.webp',
+      mobileImageUrl: '',
+      media: { mediaType: 'image', sourceType: 'url', url: '', posterUrl: '', publicId: '' },
+    });
+    syncHeroMedia(s as never);
+    expect(s.hero.videoUrl).toBe('https://www.pexels.com/download/video/4177953/');
+    expect(s.hero.posterUrl).toBe('https://res.cloudinary.com/x/image/upload/v1/poster.webp');
   });
 });

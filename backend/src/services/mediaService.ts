@@ -314,6 +314,28 @@ export function sanitizePersistedUrl(
 }
 
 /**
+ * Non-throwing read-path variant of `sanitizePersistedUrl`. Returns the trimmed
+ * safe public URL when the value is a durable http(s) asset (Cloudinary or an
+ * external image/video URL), or `''` for anything unsafe or empty —
+ * localhost, 127.0.0.1, private/IP ranges, `/uploads/...` backend references,
+ * `blob:`/`data:`/`file:`/`javascript:`, relative and absolute local paths.
+ *
+ * Used when materializing a document to send to the browser (or to re-save) so
+ * a stale localhost `/uploads/...` value left in the DB can never be requested
+ * by the client (mixed-content) or fail a subsequent save — it is simply cleared
+ * instead of surfaced.
+ */
+export function cleanPersistedUrl(value?: string | null): string {
+  const v = value?.trim() ?? '';
+  if (!v) return '';
+  try {
+    return sanitizePersistedUrl(v);
+  } catch {
+    return '';
+  }
+}
+
+/**
  * Removes a file only when it is an application-owned upload; external URLs are never touched. */
 export async function removeUploadedMedia(
   media: { sourceType?: string; publicId?: string; mediaType?: string } | null | undefined,

@@ -4,13 +4,14 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { ok } from '../utils/apiResponse';
 import { storeImage, deleteImage } from '../services/fileStorage';
 import { ApiError } from '../utils/ApiError';
-import { removeUploadedMedia, validateImageSignature } from '../services/mediaService';
+import { removeUploadedMedia, validateImageSignature, cleanPersistedUrl } from '../services/mediaService';
 import type { SalonSettingsDocument } from '../models/SalonSettings';
 import type { AuthRequest } from '../middleware/auth';
 
 export const getSalonHandler = asyncHandler(async (_req: Request, res: Response) => {
   const settings = await getOrCreateSalonSettings();
   syncHeroMedia(settings);
+  scrubSalonMediaReferences(settings);
   ok(res, settings, 'Salon fetched');
 });
 
@@ -92,6 +93,16 @@ export function syncHeroMedia(settings: SalonSettingsDocument): void {
     playsInline: true,
   });
 
+  // Self-heal: never surface a stale localhost / /uploads/ / private-network
+  // reference (e.g. http://localhost:5000/uploads/media-...png left by an earlier
+  // dev session). Scrubbed values become '' so the browser can't request them
+  // (mixed-content) and the next hero save won't fail validation.
+  hero.videoUrl = cleanPersistedUrl(hero.videoUrl);
+  hero.posterUrl = cleanPersistedUrl(hero.posterUrl);
+  hero.mobileImageUrl = cleanPersistedUrl(hero.mobileImageUrl);
+  media.url = cleanPersistedUrl(media.url);
+  media.posterUrl = cleanPersistedUrl(media.posterUrl);
+
   if (!media.url && media.mediaType !== 'none') {
     if (hero.videoUrl) {
       media.mediaType = 'video';
@@ -108,7 +119,12 @@ export function syncHeroMedia(settings: SalonSettingsDocument): void {
     }
   }
 
-  if (!media.url) return;
+  if (!media.url) {
+    // No usable hero asset after self-healing — also drop any orphaned publicId
+    // so a stale Cloudinary/upload reference is never carried or treated as live.
+    media.publicId = '';
+    return;
+  }
   if (media.mediaType === 'video') {
     hero.videoUrl = media.url;
     if (media.posterUrl) hero.posterUrl = media.posterUrl;
@@ -119,5 +135,22 @@ export function syncHeroMedia(settings: SalonSettingsDocument): void {
     hero.videoUrl = '';
   } else {
     hero.videoUrl = '';
+  }
+}
+
+/**
+ * Read-path safety net for the non-hero salon media fields. Clears any stale
+ * localhost / /uploads/ / private-network / blob / data / file reference from
+ * logo, about image and offer images so the browser never requests an unsafe
+ * URL (mixed-content) and a subsequent save never fails validation. Safe
+ * Cloudinary and external public URLs are preserved unchanged.
+ */
+function scrubSalonMediaReferences(settings: SalonSettingsDocument): void {
+  if (settings.logo?.url) settings.logo.url = cleanPersistedUrl(settings.logo.url);
+  if (settings.about?.imageUrl) settings.about.imageUrl = cleanPersistedUrl(settings.about.imageUrl);
+  if (settings.offers?.items?.length) {
+    settings.offers.items = settings.offers.items.map((item) =>
+      item?.imageUrl ? { ...item, imageUrl: cleanPersistedUrl(item.imageUrl) } : item,
+    );
   }
 }

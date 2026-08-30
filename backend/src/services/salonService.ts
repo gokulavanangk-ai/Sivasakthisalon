@@ -1,5 +1,5 @@
 import { SalonSettings, type SalonSettingsDocument, type WebsiteSections, type OffersConfig, type BusinessInfo } from '../models/SalonSettings';
-import { sanitizePersistedUrl } from './mediaService';
+import { sanitizePersistedUrl, cleanPersistedUrl } from './mediaService';
 import { BusinessHours, type BusinessHoursDocument } from '../models/BusinessHours';
 import { ApiError } from '../utils/ApiError';
 
@@ -212,6 +212,15 @@ export async function updateSalonSettings(
   data: Partial<SalonSettingsDocument>,
 ): Promise<SalonSettingsDocument> {
   const settings = await getOrCreateSalonSettings();
+
+  // Self-heal stale DB baseline before merge: a localhost / /uploads/ reference
+  // left in the DB by an earlier session must not fail a save that only touches
+  // one field. We clear it from the loaded baseline (it is replaced by the
+  // client's clean value on merge, or cleared entirely). The strict
+  // `sanitizePersistedUrl` guard below still rejects any genuinely-unsafe NEW
+  // value the client sends.
+  cleanSalonBaselineMedia(settings);
+
   const merged = deepMerge(settings.toObject(), data) as Partial<SalonSettingsDocument>;
   Object.assign(settings, merged);
   syncBusinessInfo(settings, data);
@@ -234,6 +243,28 @@ export async function updateSalonSettings(
 
   await settings.save();
   return settings;
+}
+
+/**
+ * Clears stale unsafe media references (localhost, /uploads/, private-network,
+ * blob:/data:/file:, absolute paths) from a salon document's media fields so a
+ * pre-existing broken value can never fail a save or be served to clients.
+ * Safe Cloudinary and external public URLs are preserved. Non-throwing.
+ */
+function cleanSalonBaselineMedia(settings: Partial<SalonSettingsDocument>): void {
+  if (settings.logo?.url) settings.logo.url = cleanPersistedUrl(settings.logo.url);
+  if (settings.about?.imageUrl) settings.about.imageUrl = cleanPersistedUrl(settings.about.imageUrl);
+  if (settings.hero) {
+    if (settings.hero.media) settings.hero.media.url = cleanPersistedUrl(settings.hero.media.url);
+    settings.hero.videoUrl = cleanPersistedUrl(settings.hero.videoUrl);
+    settings.hero.posterUrl = cleanPersistedUrl(settings.hero.posterUrl);
+    settings.hero.mobileImageUrl = cleanPersistedUrl(settings.hero.mobileImageUrl);
+  }
+  if (settings.offers?.items?.length) {
+    settings.offers.items = settings.offers.items.map((item) =>
+      item?.imageUrl ? { ...item, imageUrl: cleanPersistedUrl(item.imageUrl) } : item,
+    );
+  }
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
