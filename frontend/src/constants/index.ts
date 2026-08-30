@@ -3,16 +3,16 @@ export const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '
 import type { BookingStatus, FaceShape, GalleryCategory, HairstyleCategory, HairType, StyleType } from '@/types';
 
 /** Builds a wa.me link from a raw phone number. Returns '' when no number is provided. */
-export function whatsappLink(whatsapp: string): string {
-  const digits = whatsapp.replace(/\D/g, '');
+export function whatsappLink(whatsapp?: string | null): string {
+  const digits = whatsapp ? whatsapp.replace(/\D/g, '') : '';
   if (!digits) return '';
   const normalized = digits.startsWith('91') ? digits : `91${digits}`;
   return `https://wa.me/${normalized}`;
 }
 
 /** Builds an Instagram profile link from a handle. Returns '' when no handle is provided. */
-export function instagramLink(handle: string): string {
-  const clean = handle.replace(/^@/, '').trim();
+export function instagramLink(handle?: string | null): string {
+  const clean = handle ? handle.replace(/^@/, '').trim() : '';
   if (!clean) return '';
   return `https://instagram.com/${clean}`;
 }

@@ -7,13 +7,40 @@ export function cn(...inputs: ClassValue[]): string {
 
 /**
  * Returns the salon's shared business information straight from MongoDB (the
- * single source of truth). No hardcoded fallbacks — the backend guarantees the
- * businessInfo object is always populated, so the DB is the only source of the
- * salon's name, phone, address, socials, and experience years.
+ * single source of truth). No hardcoded fallbacks — but fields that MongoDB
+ * leaves out (or stores as null) are coerced to their declared type so no
+ * consumer ever receives `undefined`. Numeric fields keep their number when
+ * present; string fields become '' when absent.
  */
 export function businessInfoOf(salon?: SalonSettings): BusinessInfo {
-  return (salon?.businessInfo ?? {}) as BusinessInfo;
+  const src = (salon?.businessInfo ?? {}) as Partial<Record<keyof BusinessInfo, unknown>>;
+  const out: Record<string, unknown> = {};
+  for (const key of BUSINESS_INFO_KEYS) {
+    const value = src[key];
+    out[key] = typeof value === 'string' ? value : value ?? '';
+  }
+  return out as unknown as BusinessInfo;
 }
+
+const BUSINESS_INFO_KEYS: (keyof BusinessInfo)[] = [
+  'salonName',
+  'tamilName',
+  'tagline',
+  'taglineTamil',
+  'experienceYears',
+  'happyCustomers',
+  'professionalBarbers',
+  'phone',
+  'whatsapp',
+  'email',
+  'address',
+  'openingHours',
+  'workingDays',
+  'instagram',
+  'facebook',
+  'youtube',
+  'googleMapsUrl',
+];
 
 // ---------- Media helpers ----------
 
@@ -103,7 +130,8 @@ export function resolveHeroMedia(hero?: SalonSettings['hero']): HeroMediaResolve
   return { videoUrl, imageUrl, poster };
 }
 
-export function formatPhone(phone: string): string {
+export function formatPhone(phone?: string | null): string {
+  if (!phone) return '';
   const digits = phone.replace(/\D/g, '');
   if (digits.length === 10) return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
   return phone;
