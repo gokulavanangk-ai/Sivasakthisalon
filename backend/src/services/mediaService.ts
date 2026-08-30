@@ -17,8 +17,12 @@ export interface MediaValue {
   publicId: string;
 }
 
-/** Web-accessible local media directories (relative to the frontend public dir). */
-export const LOCAL_MEDIA_PREFIXES = ['/images/', '/videos/', '/uploads/'] as const;
+/**
+ * Web-accessible local media directories (relative to the frontend public dir).
+ * NOTE: /uploads/ is intentionally NOT included — that prefix belongs to backend
+ * uploads (Render temp storage), which is never a valid public media source.
+ */
+export const LOCAL_MEDIA_PREFIXES = ['/images/', '/videos/'] as const;
 
 export function detectMediaType(mime: string): MediaType {
   if ((IMAGE_MIME as readonly string[]).includes(mime)) return 'image';
@@ -88,7 +92,7 @@ export function validateLocalPath(value?: string): string {
   if (!v) throw ApiError.badRequest('Local media path is required', 'LOCAL_PATH_REQUIRED');
   if (!isLocalMediaPath(v)) {
     throw ApiError.badRequest(
-      'Invalid local media path. Use /images/..., /videos/... or /uploads/...',
+      'Invalid local media path. Use /images/... or /videos/...',
       'INVALID_LOCAL_PATH',
     );
   }
@@ -120,11 +124,12 @@ export async function resolveMediaValue(input: MediaInput): Promise<MediaValue> 
     // A previously-uploaded file whose reference is being carried in a JSON
     // update (url + publicId) is preserved as-is when sourceType is 'upload'.
     if (input.sourceType === 'upload' && input.url && input.publicId) {
-      // Only ever preserve a genuine web URL. Localhost, local device paths and
-      // temporary Render filesystem URLs must not be re-persisted as uploads.
-      if (!isWebUrl(input.url)) {
+      // Only ever preserve a genuine public https URL (Cloudinary secure_urls
+      // are always https). Localhost, local device paths and temporary Render
+      // filesystem URLs (plain http or non-https) must never be re-persisted.
+      if (!/^https:\/\/[^\s/$.?#].[^\s]*$/i.test(input.url.trim())) {
         throw ApiError.badRequest(
-          'Invalid stored media reference. Uploads must be a full http(s) URL',
+          'Invalid stored media reference. Uploads must be a full https URL',
           'INVALID_URL',
         );
       }

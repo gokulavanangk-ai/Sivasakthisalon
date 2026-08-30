@@ -107,10 +107,3 @@ export const uploadMedia = multer({
   fileFilter: mediaFilter,
   limits: { fileSize: MAX_VIDEO_SIZE, files: 1 },
 });
-
-export function publicUrl(filename: string): string {
-  if (env.isProduction) {
-    return `/uploads/${filename}`;
-  }
-  return `http://localhost:${env.port}/uploads/${filename}`;
-}

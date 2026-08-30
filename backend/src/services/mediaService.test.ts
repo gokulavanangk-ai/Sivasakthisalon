@@ -90,15 +90,26 @@ describe('URL validation', () => {
     });
   });
 
-  it('preserves an already-uploaded file reference when url + publicId are provided', async () => {
+  it('preserves an already-uploaded file reference when a valid https url + publicId are provided', async () => {
     const value = await resolveMediaValue({
       sourceType: 'upload',
       mediaType: 'image',
-      url: 'http://localhost:5000/uploads/media-123-1.jpg',
-      publicId: 'media-123-1.jpg',
+      url: 'https://res.cloudinary.com/uen3jw7c/image/upload/v1/sivasakthi-salon/media-1.jpg',
+      publicId: 'sivasakthi-salon/media-1.jpg',
     });
     expect(value.sourceType).toBe('upload');
-    expect(value.publicId).toBe('media-123-1.jpg');
+    expect(value.publicId).toBe('sivasakthi-salon/media-1.jpg');
+  });
+
+  it('rejects a previously-stored localhost/local upload URL so it is never re-persisted', async () => {
+    await expect(
+      resolveMediaValue({
+        sourceType: 'upload',
+        mediaType: 'image',
+        url: 'http://localhost:5000/uploads/media-123-1.jpg',
+        publicId: 'media-123-1.jpg',
+      }),
+    ).rejects.toThrow(ApiError);
   });
 });
 
