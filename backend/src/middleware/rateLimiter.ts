@@ -36,3 +36,19 @@ export const bookingLimiter = rateLimit({
     errorCode: 'RATE_LIMITED',
   },
 });
+
+/**
+ * Stricter limit for authenticated media upload endpoints — each request pushes
+ * a full file to Cloudinary, so a slow/per-IP flood is expensive and pointless.
+ */
+export const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many uploads, please wait and try again.',
+    errorCode: 'RATE_LIMITED',
+  },
+});

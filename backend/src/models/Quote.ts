@@ -7,7 +7,15 @@ export interface QuoteDocument extends Document {
   author: string | null;
   role: string;
   source: QuoteSource;
-  image: { url: string; publicId: string } | null;
+  image: {
+    url: string;
+    publicId: string;
+    width?: number;
+    height?: number;
+    bytes?: number;
+    format?: string;
+    resourceType?: string;
+  } | null;
   isActive: boolean;
   sortOrder: number;
 }
@@ -26,6 +34,11 @@ const quoteSchema: Schema = new mongoose.Schema(
     image: {
       url: { type: String, default: '' },
       publicId: { type: String, default: '' },
+      width: { type: Number, default: 0 },
+      height: { type: Number, default: 0 },
+      bytes: { type: Number, default: 0 },
+      format: { type: String, default: '' },
+      resourceType: { type: String, default: 'image' },
     },
     isActive: { type: Boolean, default: true, index: true },
     sortOrder: { type: Number, default: 0, index: true },

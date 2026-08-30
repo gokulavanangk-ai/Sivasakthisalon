@@ -35,6 +35,12 @@ export const env = {
   adminEmail: process.env.ADMIN_EMAIL ?? '',
   adminPassword: process.env.ADMIN_PASSWORD ?? '',
   storageProvider: (process.env.STORAGE_PROVIDER ?? 'local') as 'local' | 'cloudinary',
+  /**
+   * Maximum size (in MB) of a single uploaded image, configurable at deploy
+   * time. Defaults to 10 MB so large mobile/DSLR photos are accepted while
+   * still being validated before the bytes ever reach Cloudinary.
+   */
+  maxImageUploadMb: Number.parseFloat(process.env.MAX_IMAGE_UPLOAD_MB ?? '10') || 10,
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME ?? '',
     apiKey: process.env.CLOUDINARY_API_KEY ?? '',

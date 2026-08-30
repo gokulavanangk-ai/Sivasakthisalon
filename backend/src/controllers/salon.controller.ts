@@ -4,8 +4,9 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { ok } from '../utils/apiResponse';
 import { storeImage, deleteImage } from '../services/fileStorage';
 import { ApiError } from '../utils/ApiError';
-import { removeUploadedMedia } from '../services/mediaService';
+import { removeUploadedMedia, validateImageSignature } from '../services/mediaService';
 import type { SalonSettingsDocument } from '../models/SalonSettings';
+import type { AuthRequest } from '../middleware/auth';
 
 export const getSalonHandler = asyncHandler(async (_req: Request, res: Response) => {
   const settings = await getOrCreateSalonSettings();
@@ -31,15 +32,30 @@ export const updateSalonHandler = asyncHandler(async (req: Request, res: Respons
   ok(res, settings, 'Salon updated');
 });
 
-export const uploadLogoHandler = asyncHandler(async (req: Request, res: Response) => {
+export const uploadLogoHandler = asyncHandler(async (req: AuthRequest, res: Response) => {
   if (!req.file) throw ApiError.badRequest('Logo image is required', 'FILE_REQUIRED');
+  // Verify the real bytes are an image before anything reaches Cloudinary.
+  validateImageSignature(req.file);
   const settings = await getOrCreateSalonSettings();
-  if (settings.logo?.publicId) {
-    await deleteImage(settings.logo.publicId);
-  }
+  const oldPublicId = settings.logo?.publicId;
+
+  // Upload the NEW logo first; only after it is safely stored and saved may the
+  // previous one be destroyed. This guarantees an upload failure can never leave
+  // the salon without a logo (the DB keeps pointing at the old asset).
   const stored = await storeImage(req.file);
-  settings.logo = { url: stored.url, publicId: stored.publicId };
+  settings.logo = {
+    url: stored.url,
+    publicId: stored.publicId,
+    width: stored.width,
+    height: stored.height,
+    bytes: stored.bytes,
+    format: stored.format,
+  };
   await settings.save();
+
+  if (oldPublicId && oldPublicId !== stored.publicId) {
+    await deleteImage(oldPublicId);
+  }
   ok(res, settings.logo, 'Logo uploaded');
 });
 

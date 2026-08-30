@@ -9,6 +9,13 @@ export interface GalleryMedia {
   title: string;
   isActive: boolean;
   order: number;
+  width?: number;
+  height?: number;
+  bytes?: number;
+  format?: string;
+  resourceType?: string;
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 export interface GalleryItemDocument extends Document {
@@ -42,6 +49,13 @@ const mediaSchema: Schema = new mongoose.Schema(
     title: { type: String, default: '' },
     isActive: { type: Boolean, default: true },
     order: { type: Number, default: 0 },
+    width: { type: Number, default: 0 },
+    height: { type: Number, default: 0 },
+    bytes: { type: Number, default: 0 },
+    format: { type: String, default: '' },
+    resourceType: { type: String, default: 'image' },
+    createdBy: { type: String, default: '' },
+    updatedBy: { type: String, default: '' },
   },
   { _id: false },
 );

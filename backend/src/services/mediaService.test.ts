@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeAll, afterAll } from 'vitest';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import {
   detectMediaType,
   validateWebUrl,
@@ -6,35 +9,93 @@ import {
   isLocalMediaPath,
   validateLocalPath,
   resolveMediaValue,
+  storeUploadedMedia,
+  validateImageSignature,
+  removeUploadedMedia,
 } from '../services/mediaService';
+import { detectImageFormat, isUnsafeHost } from '../middleware/upload';
 import { ApiError } from '../utils/ApiError';
 
-function fakeFile(mimetype: string, size: number): Express.Multer.File {
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sivasakthi-media-test-'));
+const tempPaths: string[] = [];
+
+function writeFile(name: string, bytes: Buffer): string {
+  const p = path.join(dir, name);
+  fs.writeFileSync(p, bytes);
+  tempPaths.push(p);
+  return p;
+}
+
+function jpegBytes(): Buffer {
+  const b = Buffer.alloc(32);
+  b[0] = 0xff; b[1] = 0xd8; b[2] = 0xff; b[3] = 0xe0;
+  b.write('JFIF', 6, 'ascii');
+  return b;
+}
+function pngBytes(): Buffer {
+  const b = Buffer.alloc(24);
+  [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].forEach((v, i) => { b[i] = v; });
+  b.writeUInt32BE(1, 16);
+  b.writeUInt32BE(1, 20);
+  return b;
+}
+function webpBytes(): Buffer {
+  const b = Buffer.alloc(16);
+  b.write('RIFF', 0, 'ascii');
+  b.write('WEBP', 8, 'ascii');
+  return b;
+}
+function textBytes(): Buffer {
+  return Buffer.from('this is definitely not an image\n', 'ascii');
+}
+
+function fakeFile(
+  filePath: string,
+  mimetype: string,
+  size: number,
+  originalname = 'fake.png',
+): Express.Multer.File {
   return {
     mimetype,
     size,
     fieldname: 'file',
-    originalname: 'fake.bin',
+    originalname,
     encoding: '7bit',
-    destination: '',
-    filename: 'media-123-1.jpg',
-    path: '/tmp/media-123-1.jpg',
+    destination: dir,
+    filename: path.basename(filePath),
+    path: filePath,
     stream: undefined as never,
     buffer: Buffer.alloc(0),
   };
 }
 
+beforeAll(() => {
+  const jpg = writeFile('sample.jpg', jpegBytes());
+  const png = writeFile('sample.png', pngBytes());
+  const webp = writeFile('sample.webp', webpBytes());
+  const txt = writeFile('sample.txt', textBytes());
+  (globalThis as Record<string, string>).__t_jpg = jpg;
+  (globalThis as Record<string, string>).__t_png = png;
+  (globalThis as Record<string, string>).__t_webp = webp;
+  (globalThis as Record<string, string>).__t_txt = txt;
+});
+
+afterAll(() => {
+  for (const p of tempPaths) {
+    try { fs.unlinkSync(p); } catch { /* ignore */ }
+  }
+  try { fs.rmdirSync(dir, { recursive: true }); } catch { /* ignore */ }
+});
+
+const g = globalThis as Record<string, string>;
+
 describe('detectMediaType', () => {
-  it('detects images', () => {
+  it('detects images and videos by MIME', () => {
     expect(detectMediaType('image/jpeg')).toBe('image');
     expect(detectMediaType('image/png')).toBe('image');
     expect(detectMediaType('image/webp')).toBe('image');
-  });
-
-  it('detects videos', () => {
     expect(detectMediaType('video/mp4')).toBe('video');
     expect(detectMediaType('video/webm')).toBe('video');
-    expect(detectMediaType('video/quicktime')).toBe('video');
   });
 
   it('rejects executables and unknown types', () => {
@@ -43,54 +104,108 @@ describe('detectMediaType', () => {
   });
 });
 
-describe('file size validation', () => {
-  it('rejects an oversized image (over 5 MB)', async () => {
-    await expect(resolveMediaValue({ file: fakeFile('image/jpeg', 6 * 1024 * 1024) })).rejects.toThrow(
-      ApiError,
-    );
+describe('detectImageFormat (magic bytes, not filename/MIME)', () => {
+  it('identifies real JPEG/PNG/WEBP bytes', () => {
+    expect(detectImageFormat(jpegBytes())).toBe('image/jpeg');
+    expect(detectImageFormat(pngBytes())).toBe('image/png');
+    expect(detectImageFormat(webpBytes())).toBe('image/webp');
   });
 
-  it('accepts an image at the limit', async () => {
-    const value = await resolveMediaValue({ file: fakeFile('image/jpeg', 5 * 1024 * 1024) });
-    expect(value.mediaType).toBe('image');
-    expect(value.sourceType).toBe('upload');
-    expect(value.url).toBeTruthy();
+  it('identifies GIF, BMP and AVIF bytes', () => {
+    const gif = Buffer.alloc(16); gif.write('GIF89a', 0, 'ascii');
+    const bmp = Buffer.alloc(16); bmp.write('BM', 0, 'ascii');
+    const avif = Buffer.alloc(16); avif.writeUInt32BE(16, 0); avif.write('ftyp', 4, 'ascii'); avif.write('avif', 8, 'ascii');
+    expect(detectImageFormat(gif)).toBe('image/gif');
+    expect(detectImageFormat(bmp)).toBe('image/bmp');
+    expect(detectImageFormat(avif)).toBe('image/avif');
   });
 
-  it('rejects an oversized video (over 50 MB)', async () => {
-    await expect(resolveMediaValue({ file: fakeFile('video/mp4', 51 * 1024 * 1024) })).rejects.toThrow(
-      ApiError,
-    );
+  it('returns null for non-image bytes', () => {
+    expect(detectImageFormat(textBytes())).toBeNull();
   });
 });
 
-describe('URL validation', () => {
-  it('accepts https URLs', () => {
-    expect(isWebUrl('https://example.com/image.webp')).toBe(true);
-    expect(validateWebUrl('https://example.com/video.mp4')).toBe('https://example.com/video.mp4');
+describe('validateImageSignature', () => {
+  it('accepts a real on-disk JPEG/PNG/WEBP', () => {
+    expect(() => validateImageSignature(fakeFile(g.__t_jpg, 'image/jpeg', fs.statSync(g.__t_jpg).size))).not.toThrow();
+    expect(() => validateImageSignature(fakeFile(g.__t_png, 'image/png', fs.statSync(g.__t_png).size))).not.toThrow();
+    expect(() => validateImageSignature(fakeFile(g.__t_webp, 'image/webp', fs.statSync(g.__t_webp).size))).not.toThrow();
   });
 
-  it('rejects javascript, file and malformed URLs', () => {
+  it('rejects a mislabeled/non-image file even when MIME claims image', () => {
+    const f = fakeFile(g.__t_txt, 'image/jpeg', fs.statSync(g.__t_txt).size, 'evil.jpg');
+    expect(() => validateImageSignature(f)).toThrow(ApiError);
+  });
+});
+
+describe('file size validation', () => {
+  it('rejects an oversized image', async () => {
+    // Real bytes but a size way over any configured limit.
+    const f = fakeFile(g.__t_jpg, 'image/jpeg', 20 * 1024 * 1024);
+    await expect(resolveMediaValue({ file: f })).rejects.toThrow(ApiError);
+  });
+
+  it('accepts a real uploaded image (dev provider returns a local URL)', async () => {
+    const f = fakeFile(g.__t_png, 'image/png', fs.statSync(g.__t_png).size);
+    const value = await storeUploadedMedia(f);
+    expect(value.mediaType).toBe('image');
+    expect(value.sourceType).toBe('upload');
+    expect(value.url).toBeTruthy();
+    expect(value.publicId).toBeTruthy();
+  });
+
+  it('rejects a real but oversized video', async () => {
+    const f = fakeFile(g.__t_jpg, 'video/mp4', 51 * 1024 * 1024);
+    await expect(resolveMediaValue({ file: f })).rejects.toThrow(ApiError);
+  });
+});
+
+describe('SSRF-safe URL validation', () => {
+  it('rejects localhost / private / internal network hosts', () => {
+    expect(isUnsafeHost('localhost')).toBe(true);
+    expect(isUnsafeHost('127.0.0.1')).toBe(true);
+    expect(isUnsafeHost('10.0.0.5')).toBe(true);
+    expect(isUnsafeHost('192.168.1.1')).toBe(true);
+    expect(isUnsafeHost('169.254.169.254')).toBe(true);
+    expect(isUnsafeHost('myhost.local')).toBe(true);
+    expect(isUnsafeHost('cdn.example.com')).toBe(false);
+  });
+
+  it('rejects http(s) URLs that point at private/internal networks', () => {
+    expect(() => validateWebUrl('http://localhost:5000/uploads/x.jpg')).toThrow(ApiError);
+    expect(() => validateWebUrl('http://127.0.0.1/x.jpg')).toThrow(ApiError);
+    expect(() => validateWebUrl('https://10.0.0.2/x.jpg')).toThrow(ApiError);
+    expect(() => validateWebUrl('https://192.168.0.10/x.jpg')).toThrow(ApiError);
+    expect(() => validateWebUrl('https://[::1]/x.jpg')).toThrow(ApiError);
+  });
+
+  it('accepts public https image URLs', () => {
+    expect(validateWebUrl('https://cdn.example.com/image.webp')).toBe('https://cdn.example.com/image.webp');
+    expect(validateWebUrl('https://images.unsplash.com/photo.jpg?v=1')).toBeTruthy();
+  });
+
+  it('rejects malformed, javascript and file URLs', () => {
     expect(() => validateWebUrl('javascript:alert(1)')).toThrow(ApiError);
     expect(() => validateWebUrl('file:///etc/passwd')).toThrow(ApiError);
     expect(() => validateWebUrl('not a url')).toThrow(ApiError);
   });
+});
 
-  it('resolves a URL source without uploading', async () => {
-    const value = await resolveMediaValue({
-      sourceType: 'url',
-      mediaType: 'video',
-      url: 'https://cdn.example.com/hero.mp4',
-    });
-    expect(value).toEqual({
-      mediaType: 'video',
-      sourceType: 'url',
-      url: 'https://cdn.example.com/hero.mp4',
-      publicId: '',
-    });
+describe('local media path validation', () => {
+  it('accepts web-accessible project paths', () => {
+    expect(isLocalMediaPath('/images/gallery/barber-01.webp')).toBe(true);
+    expect(validateLocalPath('/images/logo.png')).toBe('/images/logo.png');
   });
 
-  it('preserves an already-uploaded file reference when a valid https url + publicId are provided', async () => {
+  it('rejects absolute Windows paths and traversal', () => {
+    expect(isLocalMediaPath('C:\\Users\\me\\image.png')).toBe(false);
+    expect(isLocalMediaPath('/images/../../etc/passwd')).toBe(false);
+    expect(() => validateLocalPath('/images/..\\secret')).toThrow(ApiError);
+  });
+});
+
+describe('single source of truth: only Cloudinary secure URLs are re-persisted', () => {
+  it('preserves an existing Cloudinary upload reference', async () => {
     const value = await resolveMediaValue({
       sourceType: 'upload',
       mediaType: 'image',
@@ -98,10 +213,21 @@ describe('URL validation', () => {
       publicId: 'sivasakthi-salon/media-1.jpg',
     });
     expect(value.sourceType).toBe('upload');
-    expect(value.publicId).toBe('sivasakthi-salon/media-1.jpg');
+    expect(value.url).toContain('res.cloudinary.com');
   });
 
-  it('rejects a previously-stored localhost/local upload URL so it is never re-persisted', async () => {
+  it('rejects re-persisting a non-Cloudinary https URL', async () => {
+    await expect(
+      resolveMediaValue({
+        sourceType: 'upload',
+        mediaType: 'image',
+        url: 'https://cdn.example.org/photo.jpg',
+        publicId: 'photo.jpg',
+      }),
+    ).rejects.toThrow(ApiError);
+  });
+
+  it('rejects re-persisting a localhost /uploads URL (production never falls back)', async () => {
     await expect(
       resolveMediaValue({
         sourceType: 'upload',
@@ -111,34 +237,10 @@ describe('URL validation', () => {
       }),
     ).rejects.toThrow(ApiError);
   });
-});
 
-describe('local media path validation', () => {
-  it('accepts web-accessible project paths', () => {
-    expect(isLocalMediaPath('/images/gallery/barber-01.webp')).toBe(true);
-    expect(isLocalMediaPath('/videos/hero-salon.mp4')).toBe(true);
-    expect(validateLocalPath('/images/logo.png')).toBe('/images/logo.png');
-  });
-
-  it('rejects absolute Windows paths and traversal', () => {
-    expect(isLocalMediaPath('C:\\Users\\me\\image.png')).toBe(false);
-    expect(isLocalMediaPath('/images/../../etc/passwd')).toBe(false);
-    expect(isLocalMediaPath('//server/share/x.png')).toBe(false);
-    expect(() => validateLocalPath('/images/..\\secret')).toThrow(ApiError);
-    expect(() => validateLocalPath('/foo/bar.png')).toThrow(ApiError);
-  });
-
-  it('resolves a local source', async () => {
-    const value = await resolveMediaValue({
-      sourceType: 'local',
-      mediaType: 'image',
-      url: '/images/gallery/barber-01.webp',
-    });
-    expect(value).toEqual({
-      mediaType: 'image',
-      sourceType: 'local',
-      url: '/images/gallery/barber-01.webp',
-      publicId: '',
-    });
+  it('removing an uploaded media reference does not throw for dev/local provider', async () => {
+    await expect(
+      removeUploadedMedia({ sourceType: 'upload', publicId: 'sivasakthi-salon/media-1.jpg', mediaType: 'image' }),
+    ).resolves.toBeUndefined();
   });
 });

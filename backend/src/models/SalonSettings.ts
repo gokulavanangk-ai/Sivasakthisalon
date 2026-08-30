@@ -118,7 +118,14 @@ export interface SalonSettingsDocument extends Document {
   tagline: string;
   taglineTamil: string;
   businessInfo: BusinessInfo;
-  logo: { url: string; publicId: string } | null;
+  logo: {
+    url: string;
+    publicId: string;
+    width?: number;
+    height?: number;
+    bytes?: number;
+    format?: string;
+  } | null;
   hero: {
     title: string;
     subtitle: string;
@@ -174,6 +181,10 @@ const salonSchema: Schema = new mongoose.Schema(
     logo: {
       url: { type: String, default: '' },
       publicId: { type: String, default: '' },
+      width: { type: Number, default: 0 },
+      height: { type: Number, default: 0 },
+      bytes: { type: Number, default: 0 },
+      format: { type: String, default: '' },
     },
     hero: {
       title: { type: String, default: '' },

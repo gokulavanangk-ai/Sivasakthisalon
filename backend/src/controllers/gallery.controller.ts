@@ -4,6 +4,7 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { created, ok } from '../utils/apiResponse';
 import { ApiError } from '../utils/ApiError';
 import { isValidObjectId } from '../utils/helpers';
+import type { AuthRequest } from '../middleware/auth';
 import {
   resolveMediaValue,
   removeUploadedMedia,
@@ -26,13 +27,18 @@ function applyMedia(item: GalleryItemDocument, media: MediaValue): void {
     sourceType: media.sourceType,
     url: media.url,
     publicId: media.publicId,
+    width: media.width,
+    height: media.height,
+    bytes: media.bytes,
+    format: media.format,
+    resourceType: media.resourceType,
   };
   // Keep the legacy fields in sync for backward compatibility.
   item.imageUrl = media.mediaType === 'image' ? media.url : '';
   if (media.mediaType === 'image') item.publicId = media.publicId;
 }
 
-export const createGalleryHandler = asyncHandler(async (req: Request, res: Response) => {
+export const createGalleryHandler = asyncHandler(async (req: AuthRequest, res: Response) => {
   const body = req.body as Record<string, any>;
   const mediaInput = body.media ?? body;
   const media = await resolveMediaValue({
@@ -42,6 +48,7 @@ export const createGalleryHandler = asyncHandler(async (req: Request, res: Respo
     localPath: mediaInput?.localPath,
     publicId: mediaInput?.publicId,
     file: req.file ?? null,
+    createdBy: req.user?.id,
   });
 
   const sortOrder = Number(body.sortOrder ?? 0);
@@ -64,6 +71,13 @@ export const createGalleryHandler = asyncHandler(async (req: Request, res: Respo
         alt: mediaInput?.alt ?? title,
         isActive,
         order: sortOrder,
+        width: media.width,
+        height: media.height,
+        bytes: media.bytes,
+        format: media.format,
+        resourceType: media.resourceType,
+        createdBy: req.user?.id,
+        updatedBy: req.user?.id,
       },
       imageUrl: media.mediaType === 'image' ? media.url : '',
       publicId: media.mediaType === 'image' ? media.publicId : '',
@@ -76,7 +90,7 @@ export const createGalleryHandler = asyncHandler(async (req: Request, res: Respo
   created(res, item, 'Media added');
 });
 
-export const updateGalleryHandler = asyncHandler(async (req: Request, res: Response) => {
+export const updateGalleryHandler = asyncHandler(async (req: AuthRequest, res: Response) => {
   if (!isValidObjectId(req.params.id)) throw ApiError.notFound('Media not found');
   const item = await GalleryItem.findById(req.params.id).exec();
   if (!item) throw ApiError.notFound('Media not found');
@@ -100,9 +114,11 @@ export const updateGalleryHandler = asyncHandler(async (req: Request, res: Respo
       localPath: mediaInput?.localPath,
       publicId: mediaInput?.publicId,
       file: req.file ?? null,
+      createdBy: req.user?.id,
     });
     try {
       applyMedia(item, media);
+      item.media.updatedBy = req.user?.id ?? '';
       await item.save();
     } catch (err) {
       // New media was saved to storage but the record update failed.

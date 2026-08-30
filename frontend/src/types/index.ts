@@ -26,6 +26,13 @@ export interface MediaValue {
   title?: string;
   isActive?: boolean;
   order?: number;
+  width?: number;
+  height?: number;
+  bytes?: number;
+  format?: string;
+  resourceType?: string;
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 export interface UploadedMedia {
@@ -35,6 +42,11 @@ export interface UploadedMedia {
   sourceType: MediaSource;
   size: number;
   originalName?: string;
+  width?: number;
+  height?: number;
+  bytes?: number;
+  format?: string;
+  resourceType?: string;
 }
 
 export interface LocalMediaFile {
@@ -353,4 +365,10 @@ export interface LibraryAsset {
   url: string;
   publicId: string;
   mediaType: MediaType;
+  width?: number;
+  height?: number;
+  bytes?: number;
+  format?: string;
+  resourceType?: string;
+  createdAt?: string;
 }

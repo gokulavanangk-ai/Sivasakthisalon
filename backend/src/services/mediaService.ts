@@ -1,10 +1,18 @@
 import { ApiError } from '../utils/ApiError';
-import { storeMedia, deleteMedia, type StoredMediaType } from './fileStorage';
+import {
+  storeMedia,
+  deleteMedia,
+  type StoredMediaType,
+  type StoredMedia,
+} from './fileStorage';
 import {
   IMAGE_MIME,
   VIDEO_MIME,
   MAX_IMAGE_SIZE,
   MAX_VIDEO_SIZE,
+  detectImageFormat,
+  isUnsafeHost,
+  readUploadedFile,
 } from '../middleware/upload';
 
 export type MediaType = 'image' | 'video';
@@ -15,6 +23,13 @@ export interface MediaValue {
   sourceType: MediaSource;
   url: string;
   publicId: string;
+  width?: number;
+  height?: number;
+  bytes?: number;
+  format?: string;
+  resourceType?: string;
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 /**
@@ -37,7 +52,7 @@ export function detectMediaType(mime: string): MediaType {
 export function validateMediaFile(file: Express.Multer.File): MediaType {
   const mediaType = detectMediaType(file.mimetype);
   if (mediaType === 'image' && file.size > MAX_IMAGE_SIZE) {
-    throw ApiError.badRequest(`Image must be ${MAX_IMAGE_SIZE / (1024 * 1024)} MB or smaller`, 'FILE_TOO_LARGE');
+    throw ApiError.badRequest(`Image must be ${Math.ceil(MAX_IMAGE_SIZE / (1024 * 1024))} MB or smaller`, 'FILE_TOO_LARGE');
   }
   if (mediaType === 'video' && file.size > MAX_VIDEO_SIZE) {
     throw ApiError.badRequest(`Video must be ${MAX_VIDEO_SIZE / (1024 * 1024)} MB or smaller`, 'FILE_TOO_LARGE');
@@ -45,10 +60,43 @@ export function validateMediaFile(file: Express.Multer.File): MediaType {
   return mediaType;
 }
 
-export async function storeUploadedMedia(file: Express.Multer.File): Promise<MediaValue> {
+/**
+ * Validates the actual file signature (magic bytes) against the declared MIME
+ * type. The multer file filter only trusts the client-supplied Content-Type,
+ * which is trivially spoofable — this re-checks the real bytes read back from
+ * disk so an executable or mislabeled file can never reach Cloudinary.
+ */
+export function validateImageSignature(file: Express.Multer.File): void {
+  if (!file.path) return;
+  let buffer: Buffer;
+  try {
+    buffer = readUploadedFile(file.path);
+  } catch {
+    throw ApiError.badRequest('Could not read the uploaded file', 'READ_FAILED');
+  }
+  const detected = detectImageFormat(buffer);
+  if (!detected) {
+    throw ApiError.badRequest(
+      'The file is not a valid image. Allowed: JPG, JPEG, PNG, WEBP, GIF, BMP, AVIF',
+      'INVALID_FILE_SIGNATURE',
+    );
+  }
+  // The declared MIME and detected signature may differ (e.g. a .jpg sent with
+  // image/png). Accept as long as BOTH are supported image formats, but always
+  // trust the detected signature over the spoofed header.
+  if (!(IMAGE_MIME as readonly string[]).includes(detected)) {
+    throw ApiError.badRequest('Unsupported image format detected in file bytes', 'UNSUPPORTED_IMAGE_FORMAT');
+  }
+}
+
+export async function storeUploadedMedia(
+  file: Express.Multer.File,
+  opts?: { createdBy?: string },
+): Promise<MediaValue> {
   let mediaType: MediaType;
   try {
     mediaType = validateMediaFile(file);
+    if (mediaType === 'image') validateImageSignature(file);
   } catch (err) {
     // Validation failed — don't leave the half-written file on disk.
     const { unlink } = await import('fs/promises');
@@ -59,19 +107,51 @@ export async function storeUploadedMedia(file: Express.Multer.File): Promise<Med
     }
     throw err;
   }
-  const stored = await storeMedia(file);
-  return { mediaType, sourceType: 'upload', url: stored.url, publicId: stored.publicId };
+  const stored: StoredMedia = await storeMedia(file);
+  return {
+    mediaType,
+    sourceType: 'upload',
+    url: stored.url,
+    publicId: stored.publicId,
+    width: stored.width,
+    height: stored.height,
+    bytes: stored.bytes ?? file.size,
+    format: stored.format,
+    resourceType: stored.resourceType,
+    createdBy: opts?.createdBy,
+    updatedBy: opts?.createdBy,
+  };
 }
 
 export function isWebUrl(value: string): boolean {
   return /^https?:\/\/\S+$/i.test(value.trim());
 }
 
+/** Extracts the host from an http(s) URL, or null when it is malformed. */
+export function hostOfUrl(value: string): string | null {
+  try {
+    const u = new URL(value.trim());
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    return u.hostname;
+  } catch {
+    return null;
+  }
+}
+
 export function validateWebUrl(value?: string): string {
   const v = value?.trim() ?? '';
   if (!v) throw ApiError.badRequest('Media URL is required', 'URL_REQUIRED');
-  if (!isWebUrl(v)) {
+  if (!isWebUrl(v) || !hostOfUrl(v)) {
     throw ApiError.badRequest('Invalid media URL. Use a full http(s) URL.', 'INVALID_URL');
+  }
+  // SSRF guard: never accept URLs that point at the local machine, a private
+  // LAN address, link-local, loopback or otherwise internal network host.
+  const host = hostOfUrl(v) as string;
+  if (isUnsafeHost(host)) {
+    throw ApiError.badRequest(
+      'This image URL points at a local or private network and cannot be used.',
+      'UNSAFE_URL',
+    );
   }
   return v;
 }
@@ -106,6 +186,8 @@ export interface MediaInput {
   localPath?: string;
   publicId?: string;
   file?: Express.Multer.File | null;
+  /** Admin id performing the upload, stored on the media value for auditing. */
+  createdBy?: string;
 }
 
 /**
@@ -114,7 +196,7 @@ export interface MediaInput {
  */
 export async function resolveMediaValue(input: MediaInput): Promise<MediaValue> {
   if (input.file) {
-    return storeUploadedMedia(input.file);
+    return storeUploadedMedia(input.file, { createdBy: input.createdBy });
   }
 
   const sourceType: MediaSource = input.sourceType === 'local' ? 'local' : 'url';
@@ -124,18 +206,19 @@ export async function resolveMediaValue(input: MediaInput): Promise<MediaValue> 
     // A previously-uploaded file whose reference is being carried in a JSON
     // update (url + publicId) is preserved as-is when sourceType is 'upload'.
     if (input.sourceType === 'upload' && input.url && input.publicId) {
-      // Only ever preserve a genuine public https URL (Cloudinary secure_urls
-      // are always https). Localhost, local device paths and temporary Render
-      // filesystem URLs (plain http or non-https) must never be re-persisted.
-      if (!/^https:\/\/[^\s/$.?#].[^\s]*$/i.test(input.url.trim())) {
+      // Only ever preserve a genuine Cloudinary secure_url. Localhost, local
+      // device paths and temporary Render filesystem URLs must never be
+      // re-persisted — the DB may only point at durable https Cloudinary assets.
+      if (!/^https:\/\/res\.cloudinary\.com\/[^\s]+$/i.test(input.url.trim())) {
         throw ApiError.badRequest(
-          'Invalid stored media reference. Uploads must be a full https URL',
+          'Invalid stored media reference. Uploads must be a full Cloudinary https URL',
           'INVALID_URL',
         );
       }
       return { mediaType, sourceType: 'upload', url: input.url, publicId: input.publicId };
     }
-    return { mediaType, sourceType, url: validateWebUrl(input.url), publicId: '' };
+    const validated = validateWebUrl(input.url);
+    return { mediaType, sourceType, url: validated, publicId: '' };
   }
 
   if (sourceType === 'local') {
