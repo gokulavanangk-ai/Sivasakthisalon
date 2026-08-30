@@ -233,7 +233,43 @@ export async function resolveMediaValue(input: MediaInput): Promise<MediaValue> 
   throw ApiError.badRequest('Select a file, provide a URL, or choose local media', 'MEDIA_REQUIRED');
 }
 
-/** Removes a file only when it is an application-owned upload; external URLs are never touched. */
+/**
+ * Sanitizes a persisted media/URL field bound for MongoDB so that only durable,
+ * publicly reachable assets are ever stored. Accepts:
+ *  - '' / undefined (cleared field),
+ *  - any full https (or http) URL that passes the SSRF host check (this includes
+ *    Cloudinary secure URLs whose host is res.cloudinary.com),
+ * and rejects everything else:
+ *  - localhost / 127.0.0.1 / private & internal network hosts (SSRF),
+ *  - backend upload references: http://localhost:PORT/uploads/... and /uploads/...,
+ *  - blob:, data:, file:, javascript://, relative paths and absolute local paths.
+ * Throws ApiError on a disallowed value; returns the trimmed safe URL otherwise.
+ */
+export function sanitizePersistedUrl(
+  value?: string,
+  label = 'Media URL',
+  opts?: { allowEmpty?: boolean },
+): string {
+  const v = value?.trim() ?? '';
+  if (!v) {
+    if (opts?.allowEmpty === false) {
+      throw ApiError.badRequest(`${label} is required`, 'URL_REQUIRED');
+    }
+    return '';
+  }
+  if (!/^https?:\/\/\S+$/i.test(v)) {
+    throw ApiError.badRequest(
+      `${label} must be a full https URL (or a Cloudinary upload URL). Localhost, /uploads/, blob:, file:, data: and local paths are not allowed.`,
+      'INVALID_URL',
+    );
+  }
+  // Rejects localhost, private/LAN/link-local/internal hosts, and anything that
+  // is not an http(s) URL.
+  return validateWebUrl(v);
+}
+
+/**
+ * Removes a file only when it is an application-owned upload; external URLs are never touched. */
 export async function removeUploadedMedia(
   media: { sourceType?: string; publicId?: string; mediaType?: string } | null | undefined,
 ): Promise<void> {

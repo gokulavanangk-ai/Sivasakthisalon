@@ -12,6 +12,7 @@ import {
   storeUploadedMedia,
   validateImageSignature,
   removeUploadedMedia,
+  sanitizePersistedUrl,
 } from '../services/mediaService';
 import { detectImageFormat, isUnsafeHost } from '../middleware/upload';
 import { ApiError } from '../utils/ApiError';
@@ -244,5 +245,39 @@ describe('single source of truth: only Cloudinary secure URLs are re-persisted',
     await expect(
       removeUploadedMedia({ sourceType: 'upload', publicId: 'sivasakthi-salon/media-1.jpg', mediaType: 'image' }),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe('sanitizePersistedUrl (salon hero/about/offers/logo + quote image fields)', () => {
+  it('keeps an empty string or undefined (cleared media)', () => {
+    expect(sanitizePersistedUrl('')).toBe('');
+    expect(sanitizePersistedUrl(undefined)).toBe('');
+    expect(sanitizePersistedUrl('   ')).toBe('');
+  });
+
+  it('accepts a Cloudinary secure URL', () => {
+    expect(sanitizePersistedUrl('https://res.cloudinary.com/uen3jw7c/image/upload/v1/sivasakthi-salon/media-1.jpg')).toContain('res.cloudinary.com');
+  });
+
+  it('accepts a safe public https image/video URL', () => {
+    expect(sanitizePersistedUrl('https://images.pexels.com/photos/1/hero.jpg')).toBe('https://images.pexels.com/photos/1/hero.jpg');
+  });
+
+  it('rejects a localhost /uploads backend reference', () => {
+    expect(() => sanitizePersistedUrl('http://localhost:5000/uploads/media-1.jpg')).toThrow(ApiError);
+    expect(() => sanitizePersistedUrl('127.0.0.1/uploads/media-1.jpg')).toThrow(ApiError);
+  });
+
+  it('rejects blob:, data:, file: and absolute local paths', () => {
+    expect(() => sanitizePersistedUrl('blob:http://localhost:5173/uuid')).toThrow(ApiError);
+    expect(() => sanitizePersistedUrl('data:image/png;base64,abc')).toThrow(ApiError);
+    expect(() => sanitizePersistedUrl('file:///C:/x/y.jpg')).toThrow(ApiError);
+    expect(() => sanitizePersistedUrl('C:\\Users\\x\\pic.jpg')).toThrow(ApiError);
+  });
+
+  it('rejects private/internal network hosts (SSRF) and relative paths', () => {
+    expect(() => sanitizePersistedUrl('http://10.0.0.5/pic.jpg')).toThrow(ApiError);
+    expect(() => sanitizePersistedUrl('/images/pic.jpg')).toThrow(ApiError);
+    expect(() => sanitizePersistedUrl('https://192.168.1.10/pic.jpg')).toThrow(ApiError);
   });
 });

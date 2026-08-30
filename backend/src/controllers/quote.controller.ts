@@ -4,7 +4,7 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { created, ok } from '../utils/apiResponse';
 import { ApiError } from '../utils/ApiError';
 import { isValidObjectId } from '../utils/helpers';
-import { removeUploadedMedia } from '../services/mediaService';
+import { removeUploadedMedia, sanitizePersistedUrl } from '../services/mediaService';
 
 export const listQuotesHandler = asyncHandler(async (req: Request, res: Response) => {
   const filter: Record<string, unknown> = {};
@@ -35,7 +35,7 @@ export const createQuoteHandler = asyncHandler(async (req: Request, res: Respons
 
   const image = body.image as { url?: string; publicId?: string } | null | undefined;
   if (image && typeof image.url === 'string' && image.url) {
-    payload.image = { url: image.url, publicId: image.publicId ?? '' };
+    payload.image = { url: sanitizePersistedUrl(image.url, 'Quote image URL'), publicId: image.publicId ?? '' };
   } else {
     payload.image = null;
   }
@@ -62,7 +62,7 @@ export const updateQuoteHandler = asyncHandler(async (req: Request, res: Respons
   if (body.image !== undefined) {
     const image = body.image as { url?: string; publicId?: string } | null;
     if (image && typeof image?.url === 'string' && image.url) {
-      existing.image = { url: image.url, publicId: image.publicId ?? '' };
+      existing.image = { url: sanitizePersistedUrl(image.url, 'Quote image URL'), publicId: image.publicId ?? '' };
     } else {
       existing.image = null;
     }

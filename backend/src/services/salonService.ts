@@ -1,4 +1,5 @@
 import { SalonSettings, type SalonSettingsDocument, type WebsiteSections, type OffersConfig, type BusinessInfo } from '../models/SalonSettings';
+import { sanitizePersistedUrl } from './mediaService';
 import { BusinessHours, type BusinessHoursDocument } from '../models/BusinessHours';
 import { ApiError } from '../utils/ApiError';
 
@@ -214,6 +215,23 @@ export async function updateSalonSettings(
   const merged = deepMerge(settings.toObject(), data) as Partial<SalonSettingsDocument>;
   Object.assign(settings, merged);
   syncBusinessInfo(settings, data);
+
+  // Data-flow guard: never persist localhost, /uploads/, blob:/file:/data: or
+  // private-network URLs into any salon media/URL field. Uploaded hero media is
+  // a Cloudinary https URL and passes; external video/poster/about/offer URLs
+  // must be safe public web URLs (SSRF-checked).
+  if (settings.logo?.url) settings.logo.url = sanitizePersistedUrl(settings.logo.url, 'Logo URL');
+  if (settings.about?.imageUrl) settings.about.imageUrl = sanitizePersistedUrl(settings.about.imageUrl, 'About image URL');
+  if (settings.hero?.media?.url) settings.hero.media.url = sanitizePersistedUrl(settings.hero.media.url, 'Hero media URL');
+  settings.hero && (settings.hero.videoUrl = sanitizePersistedUrl(settings.hero.videoUrl, 'Hero video URL'));
+  settings.hero && (settings.hero.posterUrl = sanitizePersistedUrl(settings.hero.posterUrl, 'Hero poster URL'));
+  settings.hero && (settings.hero.mobileImageUrl = sanitizePersistedUrl(settings.hero.mobileImageUrl, 'Hero mobile image URL'));
+  if (settings.offers?.items?.length) {
+    settings.offers.items = settings.offers.items.map((item) =>
+      item?.imageUrl ? { ...item, imageUrl: sanitizePersistedUrl(item.imageUrl, 'Offer image URL') } : item,
+    );
+  }
+
   await settings.save();
   return settings;
 }
