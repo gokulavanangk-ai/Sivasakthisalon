@@ -4,11 +4,10 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
-import path from 'path';
 import { env } from './config/env';
 import { logger } from './config/logger';
 import { apiLimiter } from './middleware/rateLimiter';
-import { connectDb } from './config/db';
+import { connectDb, isDbConnected } from './config/db';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler';
 
 import authRoutes from './routes/auth.routes';
@@ -22,7 +21,7 @@ import businessHoursRoutes from './routes/businessHours.routes';
 import barberRoutes from './routes/barber.routes';
 import faqRoutes from './routes/faq.routes';
 import mediaRoutes from './routes/media.routes';
-import { UPLOAD_DIR } from './middleware/upload';
+import { getUploadDir } from './middleware/upload';
 
 const app = express();
 
@@ -47,7 +46,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
 
-app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
+app.use('/uploads', express.static(getUploadDir()));
 
 app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ success: true, message: 'ok', data: { status: 'up', time: new Date().toISOString() } });
@@ -64,9 +63,17 @@ app.use(['/api'], (req, res, next) => {
 // middleware is what lets the same Express app work as a Vercel serverless
 // function, where only the app module is imported and there is no bootstrap
 // step. connectDb() is idempotent, so in the long-running path this is a no-op.
-app.use(async (_req: Request, _res: Response, next: NextFunction) => {
+app.use(async (_req: Request, res: Response, next: NextFunction) => {
   try {
     await connectDb();
+    if (!isDbConnected()) {
+      res.status(503).json({
+        success: false,
+        message: 'Database temporarily unavailable',
+        errorCode: 'DB_UNAVAILABLE',
+      });
+      return;
+    }
     next();
   } catch (err) {
     next(err);
@@ -89,4 +96,4 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 export { app };
-export { UPLOAD_DIR };
+export { getUploadDir as UPLOAD_DIR };

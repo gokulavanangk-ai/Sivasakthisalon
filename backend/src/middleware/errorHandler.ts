@@ -13,12 +13,22 @@ export function notFoundHandler(_req: Request, res: Response): void {
 }
 
 function isDbConnectionError(err: Error): boolean {
+  const code = err instanceof Error && 'code' in err ? (err as { code?: string }).code : undefined;
+  const syscall = err instanceof Error && 'syscall' in err ? (err as { syscall?: string }).syscall : undefined;
+  const message = typeof err.message === 'string' ? err.message : '';
+
   return (
     err.name === 'MongooseServerSelectionError' ||
     err.name === 'MongoServerSelectionError' ||
     err.name === 'MongoNetworkError' ||
     err.name === 'MongoTimeoutError' ||
-    (typeof err.message === 'string' && err.message.includes('buffering timed out'))
+    message.includes('buffering timed out') ||
+    code === 'ECONNREFUSED' ||
+    code === 'EAI_AGAIN' ||
+    code === 'ENOTFOUND' ||
+    code === 'ETIMEDOUT' ||
+    syscall === 'querySrv' ||
+    message.includes('querySrv')
   );
 }
 
@@ -32,6 +42,7 @@ export function errorHandler(
   let message = 'Internal server error';
   let errorCode = 'INTERNAL_ERROR';
   let details: unknown;
+  let isDbUnavailable = false;
 
   if (err instanceof ApiError) {
     status = err.statusCode;
@@ -52,6 +63,7 @@ export function errorHandler(
     if (isDbConnectionError(err)) {
       status = 503;
       errorCode = 'DB_UNAVAILABLE';
+      isDbUnavailable = true;
     } else if (err.name === 'ValidationError') {
       status = 400;
       errorCode = 'VALIDATION_ERROR';
@@ -62,6 +74,13 @@ export function errorHandler(
       message = err.message;
       details = err.stack;
     }
+  }
+
+  // Database outages are reported with a stable, non-leaky message regardless
+  // of environment. The real error stays in the server logs.
+  if (isDbUnavailable) {
+    message = 'Database temporarily unavailable';
+    details = undefined;
   }
 
   if (status >= 500) {

@@ -1,22 +1,35 @@
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-function required(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    // Allow running with missing JWT in dev only (tests may override).
-    if (process.env.NODE_ENV === 'test') return 'test-secret';
-    throw new Error(`Missing required environment variable: ${name}`);
+/**
+ * JWT secret is required for admin auth. In dev/test a missing value fails
+ * fast. On a serverless deploy a missing secret must NOT take the entire site
+ * down in a FUNCTION_INVOCATION_FAILED crash — public endpoints (services,
+ * gallery, bookings, health) don't need JWT. We degrade to an ephemeral secret
+ * and log a very loud warning instead; admin sessions will not survive across
+ * instances until JWT_SECRET is configured.
+ */
+function readJwtSecret(): string {
+  const value = process.env.JWT_SECRET;
+  if (value) return value;
+  if (process.env.NODE_ENV === 'test') return 'test-secret';
+  if (process.env.NODE_ENV === 'production') {
+    console.error(
+      '[sivasakthi-salon-api] CRITICAL: JWT_SECRET is not set in production. ' +
+        'Admin authentication is degraded until Vercel environment variable JWT_SECRET is configured.',
+    );
+    return crypto.randomBytes(32).toString('hex');
   }
-  return value;
+  throw new Error('Missing required environment variable: JWT_SECRET');
 }
 
 export const env = {
   port: parseInt(process.env.PORT ?? '5000', 10),
   nodeEnv: process.env.NODE_ENV ?? 'development',
   mongodbUri: process.env.MONGO_URI ?? 'mongodb://localhost:27017/sivasakthi_salon',
-  jwtSecret: required('JWT_SECRET'),
+  jwtSecret: readJwtSecret(),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
   clientUrl: process.env.CLIENT_URL ?? 'http://localhost:5173',
   adminEmail: process.env.ADMIN_EMAIL ?? '',

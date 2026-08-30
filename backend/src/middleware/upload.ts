@@ -1,4 +1,5 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import multer from 'multer';
 import { ApiError } from '../utils/ApiError';
@@ -20,12 +21,29 @@ const EXT_BY_MIME: Record<string, string> = {
   'video/quicktime': '.mov',
 };
 
-const UPLOAD_DIR = path.resolve(process.cwd(), 'uploads');
-
-function ensureUploadDir(): void {
-  if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+// Serverless runtimes (e.g. Vercel Lambda) mount the deployment directory
+// read-only and give no persistent disk. Local uploads therefore MUST live in
+// the OS temp directory there; the directory is created lazily on the first
+// upload rather than at module import, so a filesystem problem can never take
+// the whole function down on startup.
+function baseUploadDir(): string {
+  return env.isProduction
+    ? path.join(os.tmpdir(), 'sivasakthi-salon', 'uploads')
+    : path.resolve(process.cwd(), 'uploads');
 }
-ensureUploadDir();
+
+let uploadDir: string | null = null;
+
+export function getUploadDir(): string {
+  if (uploadDir) return uploadDir;
+  uploadDir = baseUploadDir();
+  try {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  } catch (err) {
+    uploadDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sivasakthi-salon-'));
+  }
+  return uploadDir;
+}
 
 /**
  * Safe disk storage: the stored filename is generated from the validated
@@ -33,7 +51,7 @@ ensureUploadDir();
  * executable uploads and path-traversal filenames.
  */
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+  destination: (_req, _file, cb) => cb(null, getUploadDir()),
   filename: (_req, file, cb) => {
     const ext = EXT_BY_MIME[file.mimetype] ?? '.bin';
     const name = `media-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
@@ -96,5 +114,3 @@ export function publicUrl(filename: string): string {
   }
   return `http://localhost:${env.port}/uploads/${filename}`;
 }
-
-export { UPLOAD_DIR };

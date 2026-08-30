@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { env } from '../config/env';
 import { logger } from '../config/logger';
-import { UPLOAD_DIR } from '../middleware/upload';
+import { getUploadDir } from '../middleware/upload';
 
 export type StoredMediaType = 'image' | 'video';
 
@@ -89,7 +89,7 @@ export async function deleteMedia(publicId: string, mediaType: StoredMediaType =
       await cloudinary.v2.uploader.destroy(publicId, { resource_type: mediaType });
       return;
     }
-    const target = path.join(UPLOAD_DIR, path.basename(publicId));
+    const target = path.join(getUploadDir(), path.basename(publicId));
     if (fs.existsSync(target)) fs.unlinkSync(target);
   } catch (err) {
     logger.warn({ err, publicId }, 'Media delete failed');

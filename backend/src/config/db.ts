@@ -8,7 +8,7 @@ import { logger } from './logger';
  * local flag so the connection is reused across Vercel serverless warm
  * invocations and re-established if the pool ever drops mid-process.
  */
-function isDbConnected(): boolean {
+export function isDbConnected(): boolean {
   const state = mongoose.connection.readyState;
   return state === 1 || state === 2;
 }

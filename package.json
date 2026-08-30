@@ -1,0 +1,12 @@
+{
+  "name": "sivasakthi-salon",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sivasakthi Men's Salon — full-stack website (frontend: Vite/React, backend: Express). Monorepo wrapper for Vercel deployments.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "vercel-build": "node ./scripts/vercel-build.mjs"
+  }
+}
