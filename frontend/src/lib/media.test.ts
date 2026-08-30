@@ -25,6 +25,26 @@ describe('media URL detection', () => {
     expect(isVideoUrl('https://cdn.example.com/photo.webp')).toBe(false);
   });
 
+  it('detects Pexels and common public video URLs', () => {
+    expect(isVideoUrl('https://www.pexels.com/download/video/4177953/')).toBe(true);
+    expect(isVideoUrl('https://www.pexels.com/video/4177953/')).toBe(true);
+    expect(isVideoUrl('https://videos.pexels.com/video-files/4177953/4177953-hd.mp4')).toBe(true);
+    expect(isVideoUrl('https://www.youtube.com/watch?v=abc123')).toBe(true);
+    expect(isVideoUrl('https://youtu.be/abc123')).toBe(true);
+    expect(isVideoUrl('https://vimeo.com/123456')).toBe(true);
+    expect(isVideoUrl('https://player.vimeo.com/video/123456')).toBe(true);
+    expect(isVideoUrl('https://www.dailymotion.com/video/x123abc')).toBe(true);
+    expect(isVideoUrl('https://res.cloudinary.com/x/video/upload/v1/clip.mp4')).toBe(true);
+  });
+
+  it('does not misclassify public image URLs as video', () => {
+    expect(isVideoUrl('https://www.pexels.com/photo/landscape-123/')).toBe(false);
+    expect(isVideoUrl('https://images.pexels.com/photos/1/hero.jpg')).toBe(false);
+    expect(isVideoUrl('https://www.youtube.com')).toBe(false);
+    expect(isVideoUrl(null)).toBe(false);
+    expect(isVideoUrl(undefined)).toBe(false);
+  });
+
   it('detects image URLs by extension', () => {
     expect(isImageUrl('https://example.com/photo.webp')).toBe(true);
     expect(isImageUrl('/images/gallery/barber-01.jpg')).toBe(true);
@@ -91,6 +111,14 @@ describe('mediaUrlOf / mediaTypeOf', () => {
     expect(mediaTypeOf({ media: { mediaType: 'video' }, imageUrl: '/a.jpg' })).toBe('video');
     expect(mediaTypeOf({ media: { mediaType: 'image' } })).toBe('image');
     expect(mediaTypeOf({ imageUrl: '/a.jpg' })).toBe('image');
+  });
+
+  it('classifies a public video URL as video even without an explicit media type', () => {
+    expect(mediaTypeOf({ videoUrl: 'https://www.pexels.com/download/video/4177953/' })).toBe('video');
+    expect(mediaTypeOf({ media: { url: 'https://www.pexels.com/download/video/4177953/' } })).toBe('video');
+    expect(mediaTypeOf({ media: { url: 'https://images.pexels.com/photos/1/hero.jpg' } })).toBe('image');
+    expect(mediaTypeOf(null)).toBe('image');
+    expect(mediaTypeOf(undefined)).toBe('image');
   });
 });
 

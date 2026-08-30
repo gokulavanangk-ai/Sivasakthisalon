@@ -47,19 +47,53 @@ const BUSINESS_INFO_KEYS: (keyof BusinessInfo)[] = [
 export const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
 export const VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov'];
 
-export function isVideoUrl(value?: string): boolean {
-  if (!value) return false;
-  if (/^data:video\//.test(value)) return true;
-  const clean = value.split('?')[0].split('#')[0].toLowerCase();
+/**
+ * Recognizes external video URLs by file extension, streaming formats, and known
+ * public video providers (Pexels, YouTube, Vimeo, Dailymotion, Wistia, Google
+ * Drive, Cloudinary video paths). Media-type detection is provider-aware so a
+ * public video URL is never misclassified as an image. Returns false for empty,
+ * undefined or null-ish inputs so callers never pass a bad value downstream.
+ */
+export function isVideoUrl(value?: string | null): boolean {
+  const raw = value?.trim();
+  if (!raw) return false;
+  if (/^data:video\//.test(raw)) return true;
+
+  const clean = raw.split('?')[0].split('#')[0].toLowerCase();
   if (VIDEO_EXTENSIONS.some((ext) => clean.endsWith(`.${ext}`))) return true;
   if (/\.(m3u8|mpd)(\/|$)/.test(clean)) return true;
   // Some CDNs keep the file extension on a path segment (not the end).
-  return VIDEO_EXTENSIONS.some((ext) =>
-    clean.split('/').some((seg) => seg.endsWith(`.${ext}`)),
-  );
+  if (VIDEO_EXTENSIONS.some((ext) => clean.split('/').some((seg) => seg.endsWith(`.${ext}`)))) {
+    return true;
+  }
+
+  if (!/^https?:\/\//i.test(clean)) return false;
+  // Keep the query string so provider matchers that use `?v=` etc. still work.
+  const withoutScheme = raw.trim().replace(/^https?:\/\//i, '');
+
+  // Pexels: file server host and its video landing/download page URLs.
+  if (/videos\.pexels\.com\//i.test(withoutScheme)) return true;
+  if (/^(www\.)?pexels\.com\/(download\/)?video\//i.test(withoutScheme)) return true;
+
+  // YouTube (watch / short / embed) and host-short URL (youtu.be).
+  if (/youtube\.com\/(watch\?.*v=|shorts\/|embed\/|live\/)/i.test(withoutScheme)) return true;
+  if (/youtu\.be\/[\w-]+/i.test(withoutScheme)) return true;
+
+  // Vimeo (page or embed player).
+  if (/^(player\.)?vimeo\.com\/(video\/)?\d+/i.test(withoutScheme)) return true;
+
+  // Dailymotion, Wistia and Google Drive file viewers.
+  if (/dailymotion\.com\/video\//i.test(withoutScheme)) return true;
+  if (/[\w-]+\.wistia\.com\/medias\//i.test(withoutScheme)) return true;
+  if (/drive\.google\.com\/file\/d\//i.test(withoutScheme)) return true;
+
+  // Cloudinary video assets (explicit /video/upload/ path).
+  if (/res\.cloudinary\.com\/[^/]+\/video\/upload\//i.test(withoutScheme)) return true;
+
+  return false;
 }
 
-export function isImageUrl(value?: string): boolean {
+export function isImageUrl(value?: string | null): boolean {
   if (!value) return false;
   const clean = value.split('?')[0].split('#')[0].toLowerCase();
   if (IMAGE_EXTENSIONS.some((ext) => clean.endsWith(`.${ext}`))) return true;
@@ -74,11 +108,15 @@ export function mediaUrlOf(
 }
 
 export function mediaTypeOf(
-  item: { media?: { mediaType?: string }; videoUrl?: string; imageUrl?: string } | null | undefined,
+  item: { media?: { mediaType?: string; url?: string }; videoUrl?: string; imageUrl?: string } | null | undefined,
 ): MediaType {
   if (item?.media?.mediaType === 'video') return 'video';
   if (item?.media?.mediaType === 'image') return 'image';
-  if (isVideoUrl(item?.videoUrl) && !item?.imageUrl) return 'video';
+  // Provider-aware detection on the effective URL so a public video link
+  // (e.g. a Pexels /download/video/... page) is never treated as an image.
+  const effective = item?.media?.url || item?.videoUrl || item?.imageUrl || '';
+  if (isVideoUrl(effective)) return 'video';
+  if (isImageUrl(effective)) return 'image';
   return 'image';
 }
 

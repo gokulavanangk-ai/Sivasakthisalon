@@ -190,6 +190,46 @@ export interface MediaInput {
   createdBy?: string;
 }
 
+const IMAGE_EXT_REGEX = /\.(jpe?g|png|webp|gif|bmp|avif|heic|heif)$/i;
+const VIDEO_EXT_REGEX = /\.(mp4|webm|mov|m4v|ogv)(\/|$)/i;
+
+/**
+ * Classifies a public http(s) external URL as an 'image' or 'video' based on
+ * file extension and known public video providers (Pexels, YouTube, Vimeo,
+ * Dailymotion, Wistia, Google Drive, Cloudinary video paths). This lets a
+ * caller distinguish an external image URL from an external video URL without
+ * ever routing a video through image-only (or Cloudinary upload) logic.
+ *
+ * Returns null for empty, scheme-less or explicitly ambiguous inputs so a
+ * caller can decide the default instead of guessing.
+ */
+export function externalUrlMediaType(url?: string): MediaType | null {
+  const raw = url?.trim();
+  if (!raw) return null;
+  if (!/^https?:\/\//i.test(raw)) return null;
+
+  // Provider-aware host/path checks (scheme + query already stripped below).
+  const withoutScheme = raw.replace(/^https?:\/\//i, '');
+  if (/^(www\.)?pexels\.com\/(download\/)?video\//i.test(withoutScheme)) return 'video';
+  if (/videos\.pexels\.com\//i.test(withoutScheme)) return 'video';
+  if (/youtube\.com\/(watch\?.*v=|shorts\/|embed\/|live\/)/i.test(withoutScheme)) return 'video';
+  if (/youtu\.be\/[\w-]+/i.test(withoutScheme)) return 'video';
+  if (/^(player\.)?vimeo\.com\/(video\/)?\d+/i.test(withoutScheme)) return 'video';
+  if (/dailymotion\.com\/video\//i.test(withoutScheme)) return 'video';
+  if (/[\w-]+\.wistia\.com\/medias\//i.test(withoutScheme)) return 'video';
+  if (/drive\.google\.com\/file\/d\//i.test(withoutScheme)) return 'video';
+  if (/res\.cloudinary\.com\/[^/]+\/video\/upload\//i.test(withoutScheme)) return 'video';
+
+  const clean = raw.split('?')[0].split('#')[0].replace(/^https?:\/\//i, '');
+  if (VIDEO_EXT_REGEX.test(clean)) return 'video';
+  if (/\.(m3u8|mpd)(\/|$)/i.test(clean)) return 'video';
+  if (IMAGE_EXT_REGEX.test(clean)) return 'image';
+  if (/^[^/]+\.[^/]+$/.test(clean)) return 'image';
+  if (/images?\.pexels\.com\//i.test(clean)) return 'image';
+
+  return null;
+}
+
 /**
  * Resolves a media value from an uploaded file, an external URL or a local
  * web-accessible path. Never trusts the raw input — every source is validated.
@@ -200,7 +240,12 @@ export async function resolveMediaValue(input: MediaInput): Promise<MediaValue> 
   }
 
   const sourceType: MediaSource = input.sourceType === 'local' ? 'local' : 'url';
-  const mediaType: MediaType = input.mediaType === 'video' ? 'video' : 'image';
+  const mediaType: MediaType =
+    input.mediaType === 'video'
+      ? 'video'
+      : input.mediaType === 'image'
+        ? 'image'
+        : (externalUrlMediaType(input.url) ?? 'image');
 
   if (sourceType === 'url') {
     // A previously-uploaded file whose reference is being carried in a JSON

@@ -13,6 +13,7 @@ import {
   validateImageSignature,
   removeUploadedMedia,
   sanitizePersistedUrl,
+  externalUrlMediaType,
 } from '../services/mediaService';
 import { detectImageFormat, isUnsafeHost } from '../middleware/upload';
 import * as mediaServiceNS from '../services/mediaService';
@@ -255,6 +256,67 @@ describe('SSRF-safe URL validation', () => {
     expect(() => validateWebUrl('javascript:alert(1)')).toThrow(ApiError);
     expect(() => validateWebUrl('file:///etc/passwd')).toThrow(ApiError);
     expect(() => validateWebUrl('not a url')).toThrow(ApiError);
+  });
+});
+
+const PEXELS_VIDEO = 'https://www.pexels.com/download/video/4177953/';
+
+describe('Hero / external media: correct image vs video URL classification', () => {
+  it('classifies the Pexels video URL as video by provider + path', () => {
+    expect(externalUrlMediaType(PEXELS_VIDEO)).toBe('video');
+  });
+
+  it('accepts the Pexels video URL through every validator without the local/private error', () => {
+    expect(validateWebUrl(PEXELS_VIDEO)).toBe(PEXELS_VIDEO);
+    expect(sanitizePersistedUrl(PEXELS_VIDEO, 'Hero video URL')).toBe(PEXELS_VIDEO);
+  });
+
+  it('resolveMediaValue auto-detects an external video URL as video (not image)', async () => {
+    const value = await resolveMediaValue({ sourceType: 'url', url: PEXELS_VIDEO });
+    expect(value.mediaType).toBe('video');
+    expect(value.url).toBe(PEXELS_VIDEO);
+    expect(value.sourceType).toBe('url');
+  });
+
+  it('classifies public image URLs as image', async () => {
+    expect(externalUrlMediaType('https://images.pexels.com/photos/1/hero.jpg')).toBe('image');
+    expect(
+      (await resolveMediaValue({ sourceType: 'url', url: 'https://images.pexels.com/photos/1/hero.jpg' }))
+        .mediaType,
+    ).toBe('image');
+  });
+
+  it('classifies common public video hosts as video', () => {
+    expect(externalUrlMediaType('https://www.youtube.com/watch?v=abc')).toBe('video');
+    expect(externalUrlMediaType('https://vimeo.com/123456')).toBe('video');
+    expect(externalUrlMediaType('https://videos.pexels.com/video-files/1/1-hd.mp4')).toBe('video');
+    expect(externalUrlMediaType('https://res.cloudinary.com/x/video/upload/v1/clip.mp4')).toBe('video');
+  });
+
+  it('returns null for empty/null/undefined and non-http values without crashing', () => {
+    expect(externalUrlMediaType()).toBeNull();
+    expect(externalUrlMediaType('')).toBeNull();
+    expect(externalUrlMediaType('  ')).toBeNull();
+    expect(externalUrlMediaType('blob:http://x/y')).toBeNull();
+    expect(externalUrlMediaType('/images/foo.jpg')).toBeNull();
+  });
+
+  it('rejects only genuinely unsafe URLs (localhost/private/file/blob/javascript)', () => {
+    expect(() => sanitizePersistedUrl('http://localhost:5000/uploads/x.mp4', 'Hero video URL')).toThrow(ApiError);
+    expect(() => sanitizePersistedUrl('http://127.0.0.1/x.mp4', 'Hero video URL')).toThrow(ApiError);
+    expect(() => sanitizePersistedUrl('https://10.0.0.5/x.mp4', 'Hero video URL')).toThrow(ApiError);
+    expect(() => validateWebUrl('blob:https://www.pexels.com/uuid')).toThrow(ApiError);
+    expect(() => validateWebUrl('data:video/mp4;base64,AAAA')).toThrow(ApiError);
+  });
+
+  it('does not route external video URLs through Cloudinary upload logic', () => {
+    // Cloudinary upload branch is only for a real device File (sourceType 'upload').
+    expect(sanitizePersistedUrl(PEXELS_VIDEO, 'Hero video URL')).not.toMatch(/^https:\/\/res\.cloudinary\.com\//);
+  });
+
+  it('empty/null hero media does not crash', () => {
+    expect(sanitizePersistedUrl('', 'Hero video URL')).toBe('');
+    expect(sanitizePersistedUrl(undefined, 'Hero video URL')).toBe('');
   });
 });
 
