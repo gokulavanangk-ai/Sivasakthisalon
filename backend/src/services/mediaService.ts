@@ -120,6 +120,14 @@ export async function resolveMediaValue(input: MediaInput): Promise<MediaValue> 
     // A previously-uploaded file whose reference is being carried in a JSON
     // update (url + publicId) is preserved as-is when sourceType is 'upload'.
     if (input.sourceType === 'upload' && input.url && input.publicId) {
+      // Only ever preserve a genuine web URL. Localhost, local device paths and
+      // temporary Render filesystem URLs must not be re-persisted as uploads.
+      if (!isWebUrl(input.url)) {
+        throw ApiError.badRequest(
+          'Invalid stored media reference. Uploads must be a full http(s) URL',
+          'INVALID_URL',
+        );
+      }
       return { mediaType, sourceType: 'upload', url: input.url, publicId: input.publicId };
     }
     return { mediaType, sourceType, url: validateWebUrl(input.url), publicId: '' };
