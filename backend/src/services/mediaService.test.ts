@@ -111,13 +111,15 @@ describe('detectImageFormat (magic bytes, not filename/MIME)', () => {
     expect(detectImageFormat(webpBytes())).toBe('image/webp');
   });
 
-  it('identifies GIF, BMP and AVIF bytes', () => {
+  it('identifies GIF, BMP, AVIF and HEIC bytes', () => {
     const gif = Buffer.alloc(16); gif.write('GIF89a', 0, 'ascii');
     const bmp = Buffer.alloc(16); bmp.write('BM', 0, 'ascii');
     const avif = Buffer.alloc(16); avif.writeUInt32BE(16, 0); avif.write('ftyp', 4, 'ascii'); avif.write('avif', 8, 'ascii');
+    const heic = Buffer.alloc(16); heic.writeUInt32BE(16, 0); heic.write('ftyp', 4, 'ascii'); heic.write('heic', 8, 'ascii');
     expect(detectImageFormat(gif)).toBe('image/gif');
     expect(detectImageFormat(bmp)).toBe('image/bmp');
     expect(detectImageFormat(avif)).toBe('image/avif');
+    expect(detectImageFormat(heic)).toBe('image/heic');
   });
 
   it('returns null for non-image bytes', () => {

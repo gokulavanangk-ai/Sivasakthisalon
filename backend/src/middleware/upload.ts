@@ -12,6 +12,8 @@ export const IMAGE_MIME = [
   'image/gif',
   'image/bmp',
   'image/avif',
+  'image/heic',
+  'image/heif',
 ] as const;
 export const VIDEO_MIME = ['video/mp4', 'video/webm', 'video/quicktime'] as const;
 export const ALL_MEDIA_MIME = new Set<string>([...IMAGE_MIME, ...VIDEO_MIME]);
@@ -30,6 +32,8 @@ const EXT_BY_MIME: Record<string, string> = {
   'image/gif': '.gif',
   'image/bmp': '.bmp',
   'image/avif': '.avif',
+  'image/heic': '.heic',
+  'image/heif': '.heif',
   'video/mp4': '.mp4',
   'video/webm': '.webm',
   'video/quicktime': '.mov',

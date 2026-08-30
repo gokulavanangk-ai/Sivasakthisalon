@@ -8,7 +8,7 @@ import type { LocalMediaFile, MediaSource, MediaType, MediaValue, UploadedMedia 
 export const MEDIA_IMAGE_LIMIT = 5 * 1024 * 1024;
 export const MEDIA_VIDEO_LIMIT = 50 * 1024 * 1024;
 
-export const IMAGE_ACCEPT = '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp';
+export const IMAGE_ACCEPT = '.jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif';
 export const VIDEO_ACCEPT = '.mp4,.webm,.mov,video/mp4,video/webm,video/quicktime';
 
 const SOURCE_LABELS: Record<MediaSource, string> = {

@@ -121,6 +121,110 @@ async function main(): Promise<void> {
     }
   }
 
+  // ---- SERVICES ----
+  if ((await db.listCollections({ name: 'services' }).toArray()).length) {
+    const col = db.collection('services');
+    for (const doc of await col.find({}).toArray()) {
+      const label = `services/${doc._id}`;
+      const urls: Array<{ display: string; value: string }> = [];
+      if (isBadUrl(doc.imageUrl)) urls.push({ display: 'imageUrl', value: doc.imageUrl });
+      if (doc.media && isBadUrl(doc.media.url)) urls.push({ display: 'media.url', value: doc.media.url });
+
+      for (const u of urls) {
+        const filename = fileFromUrl(u.value);
+        const localPath = localFileFor(filename);
+        if (localPath) {
+          const { url, publicId } = await uploadToCloudinary(localPath);
+          await col.updateOne(
+            { _id: doc._id },
+            {
+              $set: {
+                imageUrl: url,
+                media: {
+                  mediaType: 'image',
+                  sourceType: 'upload',
+                  url,
+                  publicId,
+                  alt: doc.englishName ?? doc.tamilName ?? '',
+                  isActive: doc.isActive ?? true,
+                  order: doc.sortOrder ?? 0,
+                },
+              },
+            },
+          );
+          changes.push({ action: 'MIGRATED', target: `${label} ${u.display}`, detail: `${u.value} -> ${url}` });
+          console.log(`MIGRATED ${label} ${u.display}: ${u.value} -> ${url}`);
+        } else {
+          changes.push({ action: 'NEEDS_REUPLOAD', target: `${label} ${u.display}`, detail: `file "${filename}" not found locally` });
+          console.log(`NEEDS RE-UPLOAD ${label} ${u.display}: ${u.value} (file "${filename}" not found)`);
+        }
+      }
+    }
+  }
+
+  // ---- HAIRSTYLES ----
+  if ((await db.listCollections({ name: 'hairstyles' }).toArray()).length) {
+    const col = db.collection('hairstyles');
+    for (const doc of await col.find({}).toArray()) {
+      const label = `hairstyles/${doc._id}`;
+      const urls: Array<{ display: string; value: string }> = [];
+      if (isBadUrl(doc.imageUrl)) urls.push({ display: 'imageUrl', value: doc.imageUrl });
+      for (const f of ['image', 'thumbnail', 'video']) {
+        if (doc[f] && isBadUrl(doc[f].url)) urls.push({ display: `${f}.url`, value: doc[f].url });
+      }
+
+      for (const u of urls) {
+        const filename = fileFromUrl(u.value);
+        const localPath = localFileFor(filename);
+        if (localPath) {
+          const { url, publicId } = await uploadToCloudinary(localPath);
+          const match = u.display.match(/^(.+)\.url$/);
+          if (match) {
+            const sub = match[1];
+            await col.updateOne({ _id: doc._id }, { $set: { [`${sub}.url`]: url, [`${sub}.publicId`]: publicId } });
+          } else {
+            await col.updateOne(
+              { _id: doc._id },
+              {
+                $set: {
+                  imageUrl: url,
+                  image: { mediaType: 'image', sourceType: 'upload', url, publicId, alt: doc.englishName ?? '', isActive: true, order: 0 },
+                },
+              },
+            );
+          }
+          changes.push({ action: 'MIGRATED', target: `${label} ${u.display}`, detail: `${u.value} -> ${url}` });
+          console.log(`MIGRATED ${label} ${u.display}: ${u.value} -> ${url}`);
+        } else {
+          changes.push({ action: 'NEEDS_REUPLOAD', target: `${label} ${u.display}`, detail: `file "${filename}" not found locally` });
+          console.log(`NEEDS RE-UPLOAD ${label} ${u.display}: ${u.value} (file "${filename}" not found)`);
+        }
+      }
+    }
+  }
+
+  // ---- QUOTES ----
+  if ((await db.listCollections({ name: 'quotes' }).toArray()).length) {
+    const col = db.collection('quotes');
+    for (const doc of await col.find({}).toArray()) {
+      const label = `quotes/${doc._id}`;
+      if (doc.image && isBadUrl(doc.image.url)) {
+        const filename = fileFromUrl(doc.image.url);
+        const localPath = localFileFor(filename);
+        if (localPath) {
+          const { url, publicId } = await uploadToCloudinary(localPath);
+          await col.updateOne({ _id: doc._id }, { $set: { 'image.url': url, 'image.publicId': publicId } });
+          changes.push({ action: 'MIGRATED', target: `${label} image.url`, detail: `${doc.image.url} -> ${url}` });
+          console.log(`MIGRATED ${label} image.url: ${doc.image.url} -> ${url}`);
+        } else {
+          await col.updateOne({ _id: doc._id }, { $set: { image: null } });
+          changes.push({ action: 'REMOVED', target: `${label} image`, detail: `file "${filename}" not found locally; image set to null` });
+          console.log(`REMOVED ${label} image: ${doc.image.url} (file "${filename}" not found; image set to null)`);
+        }
+      }
+    }
+  }
+
   // ---- SALON SETTINGS ----
   if ((await db.listCollections({ name: 'salonsettings' }).toArray()).length) {
     const col = db.collection('salonsettings');
