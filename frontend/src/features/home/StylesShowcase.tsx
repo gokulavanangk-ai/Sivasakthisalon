@@ -51,7 +51,7 @@ export function StylesShowcase() {
         className="w-[78vw] max-w-[340px] shrink-0 sm:w-[52vw] sm:max-w-[390px] lg:w-[380px]"
         renderItem={(style) => (
           <Link
-            to={`/styles#${style.englishName.toLowerCase().replace(/\s+/g, '-')}`}
+            to={`/styles#${(style.englishName || '').toLowerCase().replace(/\s+/g, '-')}`}
             className="group block"
             aria-label={`View ${style.englishName} hairstyle`}
           >

@@ -34,11 +34,11 @@ export const env = {
   clientUrl: process.env.CLIENT_URL ?? 'http://localhost:5173',
   adminEmail: process.env.ADMIN_EMAIL ?? '',
   adminPassword: process.env.ADMIN_PASSWORD ?? '',
-  storageProvider: (process.env.STORAGE_PROVIDER ?? 'local') as 'local' | 'cloudinary',
+  storageProvider: 'cloudinary' as const,
   /**
-   * Maximum size (in MB) of a single uploaded image, configurable at deploy
-   * time. Defaults to 10 MB so large mobile/DSLR photos are accepted while
-   * still being validated before the bytes ever reach Cloudinary.
+   * The maximum size allowed for a single uploaded image, in megabytes.
+   * This limit is enforced by multer so oversized or malicious files are rejected
+   * before they reach Cloudinary.
    */
   maxImageUploadMb: Number.parseFloat(process.env.MAX_IMAGE_UPLOAD_MB ?? '10') || 10,
   cloudinary: {

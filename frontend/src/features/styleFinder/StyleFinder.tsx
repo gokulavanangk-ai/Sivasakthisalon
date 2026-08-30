@@ -120,7 +120,7 @@ export function StyleFinder() {
                         transition={{ delay: i * 0.06 }}
                       >
                         <Link
-                          to={`/styles#${r.englishName.toLowerCase().replace(/\s+/g, '-')}`}
+                          to={`/styles#${(r.englishName || '').toLowerCase().replace(/\s+/g, '-')}`}
                           className="group flex items-center gap-4 rounded-md p-2 transition-colors hover:bg-ink-800"
                         >
                           <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md">

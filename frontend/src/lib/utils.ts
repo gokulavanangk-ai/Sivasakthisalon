@@ -132,7 +132,8 @@ export function resolveHeroMedia(hero?: SalonSettings['hero']): HeroMediaResolve
 
 export function formatPhone(phone?: string | null): string {
   if (!phone) return '';
-  const digits = phone.replace(/\D/g, '');
+  const phoneStr = String(phone);
+  const digits = phoneStr.replace(/\D/g, '');
   if (digits.length === 10) return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
   return phone;
 }
@@ -177,8 +178,9 @@ export function nextNDays(count: number): string[] {
   return Array.from({ length: count }, (_, i) => addDays(today, i));
 }
 
-export function escapeHtml(text: string): string {
-  return text.replace(/[&<>"']/g, (c) => {
+export function escapeHtml(text?: string | null): string {
+  if (!text) return '';
+  return String(text).replace(/[&<>"']/g, (c) => {
     const map: Record<string, string> = {
       '&': '&amp;',
       '<': '&lt;',

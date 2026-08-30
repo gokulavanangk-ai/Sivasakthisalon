@@ -65,7 +65,7 @@ export default function StylesPage() {
               {filtered.map((style) => (
                 <article
                   key={style._id}
-                  id={style.englishName.toLowerCase().replace(/\s+/g, '-')}
+                  id={(style.englishName || '').toLowerCase().replace(/\s+/g, '-')}
                   className="group overflow-hidden rounded-md border border-line bg-ink-800"
                 >
                   <div className="overflow-hidden">
