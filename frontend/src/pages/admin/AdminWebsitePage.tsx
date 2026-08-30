@@ -1,11 +1,11 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSalon } from '@/hooks/useContent';
 import { useSettingsMutations, useMediaMutations } from '@/features/admin/mutations';
 import { AdminCard, Toggle } from '@/features/admin/ui';
 import { MediaField } from '@/components/shared/MediaField';
 import { ImageUpload } from '@/components/shared/ImageUpload';
 import { SECTIONS, type SectionMeta, type FieldDef, getPath, setPath, buildPayload, emptyOffer } from '@/features/admin/websiteContent';
-import { Pencil, X, Plus, Trash2, Check } from 'lucide-react';
+import { Pencil, X, Plus, Trash2, Check, AlertTriangle, Loader2 } from 'lucide-react';
 import type { MediaValue, SalonSettings } from '@/types';
 
 export default function AdminWebsitePage() {
@@ -56,6 +56,54 @@ export default function AdminWebsitePage() {
 
 // ---------- Editor ----------
 
+// Labels for the top-level data segments a field can belong to, used to group
+// the flat field list into clear, spaced sub-sections inside each editor modal.
+const SEGMENT_LABELS: Record<string, string> = {
+  hero: 'Hero content',
+  about: 'About content',
+  sections: 'Section content',
+  toggles: 'Toggles',
+  address: 'Contact details',
+  social: 'Social links',
+  maps: 'Maps',
+  tagline: 'Tagline',
+  taglineTamil: 'Tagline',
+  footerText: 'Footer text',
+  offers: 'Offers',
+};
+
+interface FieldGroup {
+  id: string;
+  label: string;
+  fields: FieldDef[];
+}
+
+function groupFields(fields: FieldDef[]): FieldGroup[] {
+  const order: string[] = [];
+  const bySegment = new Map<string, FieldGroup>();
+  for (const field of fields) {
+    const segment = field.key.split('.')[0];
+    let group = bySegment.get(segment);
+    if (!group) {
+      group = { id: segment, label: SEGMENT_LABELS[segment] ?? 'Details', fields: [] };
+      bySegment.set(segment, group);
+      order.push(segment);
+    }
+    group.fields.push(field);
+  }
+  return order.map((segment) => bySegment.get(segment)!);
+}
+
+function GroupHeader({ label, hint }: { label: string; hint?: string }) {
+  return (
+    <div className="mb-3 flex items-center gap-3">
+      <h3 className="shrink-0 font-sans text-[11px] font-semibold uppercase tracking-widest text-gold">{label}</h3>
+      {hint && <span className="hidden truncate text-[11px] text-zinc-600 sm:block">{hint}</span>}
+      <span className="h-px flex-1 bg-white/10" />
+    </div>
+  );
+}
+
 function SectionEditorModal({
   section,
   salon,
@@ -71,7 +119,17 @@ function SectionEditorModal({
   const [saved, setSaved] = useState(false);
   const pendingUploads = useRef<Set<string>>(new Set());
 
+  // Lock the page behind the modal so only the modal body scrolls.
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, []);
+
   const offers = useMemo(() => draft.offers, [draft.offers]);
+  const groups = useMemo(() => groupFields(section.fields), [section.fields]);
 
   const rawHeroMedia = draft.hero?.media;
   const heroMediaValue: MediaValue | undefined =
@@ -117,101 +175,141 @@ function SectionEditorModal({
     });
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-10 lg:pt-16" onClick={closeModal}>
-      <div
-        className="w-full max-w-2xl rounded-md border border-white/10 bg-[#141414] p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-white">{section.label}</h2>
-            {section.tamil && <p className="font-tamil text-sm text-gold/80">{section.tamil}</p>}
-            <p className="mt-1 text-xs text-zinc-500">{section.description}</p>
-          </div>
-          <button type="button" onClick={closeModal} className="rounded-md p-1 text-zinc-400 hover:text-white" aria-label="Close">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+  const draftRecord = draft as unknown as Record<string, unknown>;
 
-        <div className="grid gap-4">
-          <div className="grid grid-cols-2 gap-3">
-            {section.fields.map((field) =>
-              field.type === 'boolean' ? (
-                <div key={field.key} className="col-span-2 rounded-md border border-white/10 p-3">
-                  <Toggle
-                    label={field.label}
-                    checked={Boolean(getPath(draft as unknown as Record<string, unknown>, field.key))}
-                    onChange={(v) => setValue(field.key, v)}
-                  />
+  return (
+    <div className="fixed inset-0 z-50 overflow-hidden bg-black/70" onClick={closeModal}>
+      <div className="flex h-full w-full items-start justify-center sm:items-center sm:p-5">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Edit ${section.label}`}
+          onClick={(e) => e.stopPropagation()}
+          className="flex h-full w-full max-w-3xl flex-col bg-[#141414] sm:h-[calc(100vh-2.5rem)] sm:rounded-md sm:border sm:border-white/10"
+        >
+          {/* Fixed header */}
+          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 px-5 py-4 sm:px-6">
+            <div className="min-w-0">
+              <div className="flex items-baseline gap-2.5">
+                <h2 className="truncate font-sans text-base font-semibold text-white sm:text-lg">{section.label}</h2>
+                {section.tamil && <p className="shrink-0 font-tamil text-sm text-gold/80">{section.tamil}</p>}
+              </div>
+              <p className="mt-0.5 line-clamp-2 text-xs text-zinc-500">{section.description}</p>
+            </div>
+            <button
+              type="button"
+              onClick={closeModal}
+              aria-label="Close"
+              className="shrink-0 rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Scrollable body */}
+          <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+            {groups.map((group) => (
+              <section key={group.id} className="mb-7 last:mb-2">
+                <GroupHeader label={group.label} />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {group.fields.map((field) =>
+                    field.type === 'boolean' ? (
+                      <div key={field.key} className="rounded-md border border-white/10 p-3 sm:col-span-2">
+                        <Toggle
+                          label={field.label}
+                          checked={Boolean(getPath(draftRecord, field.key))}
+                          onChange={(v) => setValue(field.key, v)}
+                        />
+                      </div>
+                    ) : (
+                      <ContentField key={field.key} field={field} value={getPath(draftRecord, field.key)} onChange={(v) => setValue(field.key, v)} onRegisterPendingUpload={(publicId) => pendingUploads.current.add(publicId)} />
+                    ),
+                  )}
                 </div>
-              ) : (
-                <ContentField key={field.key} field={field} value={getPath(draft as unknown as Record<string, unknown>, field.key)} onChange={(v) => setValue(field.key, v)} onRegisterPendingUpload={(publicId) => pendingUploads.current.add(publicId)} />
-              ),
+              </section>
+            ))}
+
+            {section.key === 'hero' && (
+              <section className="mb-7">
+                <GroupHeader label="Hero media" hint="Background image or video for the hero" />
+                <MediaField
+                  label="Hero media (background)"
+                  mediaType="both"
+                  value={heroMediaValue}
+                  onChange={(media) => {
+                    if (media) {
+                      setDraft((d) => ({
+                        ...d,
+                        hero: {
+                          ...d.hero,
+                          media: {
+                            mediaType: media.mediaType as 'image' | 'video',
+                            sourceType: media.sourceType,
+                            url: media.url,
+                            posterUrl: d.hero?.media?.posterUrl ?? '',
+                            publicId: media.publicId ?? '',
+                            autoplay: true,
+                            muted: true,
+                            loop: true,
+                            playsInline: true,
+                          },
+                        },
+                      }));
+                    }
+                  }}
+                  onRegisterPendingUpload={(publicId) => pendingUploads.current.add(publicId)}
+                />
+              </section>
+            )}
+
+            {section.key === 'offers' && (
+              <section className="mb-7">
+                <GroupHeader label="Offer items" hint="Add, edit or remove promotions shown on the site" />
+                <OffersEditor
+                  offers={offers}
+                  onChange={setOffer}
+                  onAdd={() => setDraft((d) => ({ ...d, offers: { ...d.offers, items: [...(d.offers?.items ?? []), { ...emptyOffer(), sortOrder: (d.offers?.items?.length ?? 0) }] } }))}
+                  onRemove={(i) => setDraft((d) => ({ ...d, offers: { ...d.offers, items: (d.offers?.items ?? []).filter((_, idx) => idx !== i) } }))}
+                  onRegisterPendingUpload={(publicId) => pendingUploads.current.add(publicId)}
+                />
+              </section>
             )}
           </div>
 
-          {section.key === 'hero' && (
-            <div className="col-span-2">
-              <MediaField
-                label="Hero media (background)"
-                mediaType="both"
-                value={heroMediaValue}
-                onChange={(media) => {
-                  if (media) {
-                    setDraft((d) => ({
-                      ...d,
-                      hero: {
-                        ...d.hero,
-                        media: {
-                          mediaType: media.mediaType as 'image' | 'video',
-                          sourceType: media.sourceType,
-                          url: media.url,
-                          posterUrl: d.hero?.media?.posterUrl ?? '',
-                          publicId: media.publicId ?? '',
-                          autoplay: true,
-                          muted: true,
-                          loop: true,
-                          playsInline: true,
-                        },
-                      },
-                    }));
-                  }
-                }}
-                onRegisterPendingUpload={(publicId) => pendingUploads.current.add(publicId)}
-              />
+          {/* Fixed footer */}
+          <div className="flex shrink-0 items-center gap-2 border-t border-white/10 px-5 py-4 sm:px-6">
+            <div className="mr-auto min-w-0">
+              {mut.save.isError ? (
+                <p className="inline-flex max-w-[220px] items-start gap-1.5 leading-snug text-xs text-red-400 sm:max-w-none">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>{mut.save.error instanceof Error ? mut.save.error.message : 'Save failed'}</span>
+                </p>
+              ) : saved ? (
+                <span className="inline-flex items-center gap-1.5 text-sm text-green-400">
+                  <Check className="h-4 w-4" /> Saved
+                </span>
+              ) : (
+                <span className="hidden text-[11px] text-zinc-600 sm:block">Changes apply when you save.</span>
+              )}
             </div>
-          )}
-
-          {section.key === 'offers' && (
-            <OffersEditor
-              offers={offers}
-              onChange={setOffer}
-              onAdd={() => setDraft((d) => ({ ...d, offers: { ...d.offers, items: [...(d.offers?.items ?? []), { ...emptyOffer(), sortOrder: (d.offers?.items?.length ?? 0) }] } }))}
-              onRemove={(i) => setDraft((d) => ({ ...d, offers: { ...d.offers, items: (d.offers?.items ?? []).filter((_, idx) => idx !== i) } }))}
-              onRegisterPendingUpload={(publicId) => pendingUploads.current.add(publicId)}
-            />
-          )}
-        </div>
-
-        <div className="mt-6 flex items-center justify-end gap-2">
-          {mut.save.isError && <p className="mr-auto text-sm text-red-400">{mut.save.error instanceof Error ? mut.save.error.message : 'Save failed'}</p>}
-          {saved && (
-            <span className="mr-auto inline-flex items-center gap-1.5 text-sm text-green-400">
-              <Check className="h-4 w-4" /> Saved
-            </span>
-          )}
-          <button type="button" onClick={closeModal} className="rounded-md px-4 py-2 text-sm text-zinc-400 hover:text-white">
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={save}
-            disabled={mut.save.isPending}
-            className="inline-flex items-center gap-2 rounded-md bg-gold px-5 py-2 text-sm font-semibold text-black hover:bg-gold-300 disabled:opacity-50"
-          >
-            {mut.save.isPending ? 'Saving…' : 'Save / Update'}
-          </button>
+            <button type="button" onClick={closeModal} className="shrink-0 rounded-md px-4 py-2 text-sm text-zinc-300 transition-colors hover:bg-white/10 hover:text-white">
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={save}
+              disabled={mut.save.isPending}
+              className="inline-flex shrink-0 items-center gap-2 rounded-md bg-gold px-5 py-2 text-sm font-semibold text-black transition-colors hover:bg-gold-300 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {mut.save.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Saving…
+                </>
+              ) : (
+                'Save changes'
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -233,7 +331,7 @@ function ContentField({
   const numValue = typeof value === 'number' ? value : '';
 
   return (
-    <label className={field.full ? 'col-span-2 block' : 'block'}>
+    <label className={field.full ? 'sm:col-span-2 block' : 'block'}>
       <span className="mb-1.5 block text-xs font-medium text-zinc-400">{field.label}</span>
       {field.isImage ? (
         <ImageUpload
