@@ -1,5 +1,16 @@
 import mongoose, { type Document, type Schema } from 'mongoose';
 
+export interface GalleryMedia {
+  mediaType: 'image' | 'video';
+  sourceType: 'upload' | 'url' | 'local';
+  url: string;
+  publicId: string;
+  alt: string;
+  title: string;
+  isActive: boolean;
+  order: number;
+}
+
 export interface GalleryItemDocument extends Document {
   title: string;
   description: string;
@@ -8,6 +19,7 @@ export interface GalleryItemDocument extends Document {
   publicId: string;
   sortOrder: number;
   isActive: boolean;
+  media: GalleryMedia;
 }
 
 export const GALLERY_CATEGORIES = [
@@ -16,7 +28,23 @@ export const GALLERY_CATEGORIES = [
   'beard-styles',
   'customers',
   'atmosphere',
+  'staff',
+  'other',
 ] as const;
+
+const mediaSchema: Schema = new mongoose.Schema(
+  {
+    mediaType: { type: String, enum: ['image', 'video'], default: 'image' },
+    sourceType: { type: String, enum: ['upload', 'url', 'local'], default: 'url' },
+    url: { type: String, default: '' },
+    publicId: { type: String, default: '' },
+    alt: { type: String, default: '' },
+    title: { type: String, default: '' },
+    isActive: { type: Boolean, default: true },
+    order: { type: Number, default: 0 },
+  },
+  { _id: false },
+);
 
 const gallerySchema: Schema = new mongoose.Schema(
   {
@@ -28,10 +56,12 @@ const gallerySchema: Schema = new mongoose.Schema(
       enum: GALLERY_CATEGORIES,
       index: true,
     },
+    // Backward-compatible legacy fields — kept in sync with `media`.
     imageUrl: { type: String, required: true },
     publicId: { type: String, default: '' },
     sortOrder: { type: Number, default: 0, index: true },
     isActive: { type: Boolean, default: true, index: true },
+    media: { type: mediaSchema, default: () => ({}) },
   },
   { timestamps: true },
 );

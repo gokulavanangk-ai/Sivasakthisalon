@@ -61,6 +61,8 @@ export const GALLERY_CATEGORIES: { value: GalleryCategory; label: string; tamil:
   { value: 'beard-styles', label: 'Beard Styles', tamil: 'மீசை ஸ்டைல்ஸ்' },
   { value: 'customers', label: 'Customers', tamil: 'வாடிக்கையாளர்கள்' },
   { value: 'atmosphere', label: 'Atmosphere', tamil: 'சூழல்' },
+  { value: 'staff', label: 'Staff', tamil: 'ஊழியர்கள்' },
+  { value: 'other', label: 'Other', tamil: 'மற்றவை' },
 ];
 
 export const HAIRSTYLE_CATEGORY_LABELS: Record<HairstyleCategory, { label: string; tamil: string }> = {

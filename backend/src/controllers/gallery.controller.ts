@@ -1,10 +1,14 @@
 import type { Request, Response } from 'express';
-import { GalleryItem } from '../models/GalleryItem';
+import { GalleryItem, type GalleryItemDocument } from '../models/GalleryItem';
 import { asyncHandler } from '../utils/asyncHandler';
 import { created, ok } from '../utils/apiResponse';
 import { ApiError } from '../utils/ApiError';
 import { isValidObjectId } from '../utils/helpers';
-import { storeImage, deleteImage } from '../services/fileStorage';
+import {
+  resolveMediaValue,
+  removeUploadedMedia,
+  type MediaValue,
+} from '../services/mediaService';
 
 export const listGalleryHandler = asyncHandler(async (req: Request, res: Response) => {
   const filter: Record<string, unknown> = {};
@@ -15,46 +19,132 @@ export const listGalleryHandler = asyncHandler(async (req: Request, res: Respons
   ok(res, items);
 });
 
+function applyMedia(item: GalleryItemDocument, media: MediaValue): void {
+  item.media = {
+    ...item.media,
+    mediaType: media.mediaType,
+    sourceType: media.sourceType,
+    url: media.url,
+    publicId: media.publicId,
+  };
+  // Keep the legacy fields in sync for backward compatibility.
+  item.imageUrl = media.mediaType === 'image' ? media.url : '';
+  if (media.mediaType === 'image') item.publicId = media.publicId;
+}
+
 export const createGalleryHandler = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.file) throw ApiError.badRequest('Gallery image is required', 'FILE_REQUIRED');
-  const stored = await storeImage(req.file);
-  const item = await GalleryItem.create({
-    title: req.body.title ?? '',
-    description: req.body.description ?? '',
-    category: req.body.category,
-    imageUrl: stored.url,
-    publicId: stored.publicId,
-    sortOrder: Number(req.body.sortOrder ?? 0),
+  const body = req.body as Record<string, any>;
+  const mediaInput = body.media ?? body;
+  const media = await resolveMediaValue({
+    mediaType: mediaInput?.mediaType,
+    sourceType: mediaInput?.sourceType,
+    url: mediaInput?.url ?? body.imageUrl,
+    localPath: mediaInput?.localPath,
+    publicId: mediaInput?.publicId,
+    file: req.file ?? null,
   });
-  created(res, item, 'Image added');
+
+  const sortOrder = Number(body.sortOrder ?? 0);
+  const isActive = body.isActive !== false;
+  const title = body.title ?? '';
+  let item: GalleryItemDocument;
+  try {
+    item = await GalleryItem.create({
+      title,
+      description: body.description ?? '',
+      category: body.category ?? 'salon-interior',
+      sortOrder,
+      isActive,
+      media: {
+        mediaType: media.mediaType,
+        sourceType: media.sourceType,
+        url: media.url,
+        publicId: media.publicId,
+        title,
+        alt: mediaInput?.alt ?? title,
+        isActive,
+        order: sortOrder,
+      },
+      imageUrl: media.mediaType === 'image' ? media.url : '',
+      publicId: media.mediaType === 'image' ? media.publicId : '',
+    });
+  } catch (err) {
+    // Don't leave an orphaned file if the database write fails.
+    await removeUploadedMedia(media);
+    throw err;
+  }
+  created(res, item, 'Media added');
 });
 
 export const updateGalleryHandler = asyncHandler(async (req: Request, res: Response) => {
-  if (!isValidObjectId(req.params.id)) throw ApiError.notFound('Image not found');
+  if (!isValidObjectId(req.params.id)) throw ApiError.notFound('Media not found');
   const item = await GalleryItem.findById(req.params.id).exec();
-  if (!item) throw ApiError.notFound('Image not found');
+  if (!item) throw ApiError.notFound('Media not found');
 
-  if (req.file) {
-    if (item.publicId) await deleteImage(item.publicId);
-    const stored = await storeImage(req.file);
-    item.imageUrl = stored.url;
-    item.publicId = stored.publicId;
+  const body = req.body as Record<string, any>;
+  const mediaInput = body.media ?? body;
+  const hasMediaChange =
+    req.file ||
+    mediaInput?.sourceType ||
+    mediaInput?.url ||
+    mediaInput?.mediaType ||
+    mediaInput?.localPath ||
+    body.imageUrl;
+
+  if (hasMediaChange) {
+    const oldMedia = item.media ? { ...item.media } : null;
+    const media = await resolveMediaValue({
+      mediaType: mediaInput?.mediaType,
+      sourceType: mediaInput?.sourceType,
+      url: mediaInput?.url ?? body.imageUrl,
+      localPath: mediaInput?.localPath,
+      publicId: mediaInput?.publicId,
+      file: req.file ?? null,
+    });
+    try {
+      applyMedia(item, media);
+      await item.save();
+    } catch (err) {
+      // New media was saved to storage but the record update failed.
+      await removeUploadedMedia(media);
+      throw err;
+    }
+
+    // Only remove the previous file after the new media has been saved — and only
+    // if it is a genuinely different upload (the same publicId means it's kept).
+    if (oldMedia?.sourceType === 'upload' && oldMedia.publicId && oldMedia.publicId !== media.publicId) {
+      await removeUploadedMedia(oldMedia);
+    }
   }
-  const { title, description, category, sortOrder, isActive } = req.body;
-  if (title !== undefined) item.title = title;
-  if (description !== undefined) item.description = description;
-  if (category !== undefined) item.category = category;
-  if (sortOrder !== undefined) item.sortOrder = Number(sortOrder);
-  if (isActive !== undefined) item.isActive = Boolean(isActive);
+
+  if (body.title !== undefined) {
+    item.title = body.title;
+    if (item.media) item.media.title = body.title;
+    if (!item.media?.alt) item.media.alt = body.title;
+  }
+  if (body.description !== undefined) item.description = body.description;
+  if (body.category !== undefined) item.category = body.category;
+  if (body.sortOrder !== undefined) {
+    item.sortOrder = Number(body.sortOrder);
+    if (item.media) item.media.order = Number(body.sortOrder);
+  }
+  if (body.isActive !== undefined) {
+    item.isActive = Boolean(body.isActive);
+    if (item.media) item.media.isActive = Boolean(body.isActive);
+  }
+  if (mediaInput?.alt !== undefined && item.media) item.media.alt = mediaInput.alt;
+
   await item.save();
-  ok(res, item, 'Image updated');
+  ok(res, item, 'Media updated');
 });
 
 export const deleteGalleryHandler = asyncHandler(async (req: Request, res: Response) => {
-  if (!isValidObjectId(req.params.id)) throw ApiError.notFound('Image not found');
+  if (!isValidObjectId(req.params.id)) throw ApiError.notFound('Media not found');
   const item = await GalleryItem.findById(req.params.id).exec();
-  if (!item) throw ApiError.notFound('Image not found');
-  if (item.publicId) await deleteImage(item.publicId);
+  if (!item) throw ApiError.notFound('Media not found');
+
+  // Delete the physical file only when it is an application-owned upload.
+  await removeUploadedMedia(item.media);
   await item.deleteOne();
-  ok(res, null, 'Image deleted');
+  ok(res, null, 'Media deleted');
 });

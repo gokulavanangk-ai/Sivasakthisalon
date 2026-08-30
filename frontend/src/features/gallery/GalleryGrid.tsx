@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import type { GalleryItem } from '@/types';
 import { GALLERY_CATEGORIES } from '@/constants';
 import { SmartImage } from '@/components/shared/SmartImage';
-import { cn } from '@/lib/utils';
+import { cn, mediaTypeOf, mediaUrlOf } from '@/lib/utils';
 
 interface GalleryGridProps {
   items: GalleryItem[];
@@ -76,35 +76,56 @@ export function GalleryGrid({ items }: GalleryGridProps) {
       </div>
 
       <div className="columns-2 gap-4 lg:columns-3 lg:gap-5 [column-fill:_balance]">
-        {filtered.map((item, i) => (
-          <motion.button
-            key={item._id}
-            type="button"
-            onClick={() => setCurrent(item)}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: (i % 6) * 0.06 }}
-            className="group relative mb-4 block w-full break-inside-avoid overflow-hidden rounded-md lg:mb-5"
-            aria-label={`View ${item.title || item.category} photo`}
-          >
-            <SmartImage
-              src={item.imageUrl}
-              alt={item.title || `${item.category} photo at Sivasakthi men's salon`}
-              aspect={i % 3 === 0 ? 'aspect-[4/5]' : 'aspect-[3/4]'}
-              imgClassName="transition-transform duration-700 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-ink/80 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-            {item.title && (
-              <div className="absolute inset-x-0 bottom-0 translate-y-2 p-4 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-                <p className="text-left font-tamil text-lg text-cream">{item.title}</p>
-                {item.description && (
-                  <p className="mt-0.5 line-clamp-1 text-left text-xs text-cream/70">{item.description}</p>
-                )}
-              </div>
-            )}
-          </motion.button>
-        ))}
+        {filtered.map((item, i) => {
+          const isVideo = mediaTypeOf(item) === 'video';
+          return (
+            <motion.button
+              key={item._id}
+              type="button"
+              onClick={() => setCurrent(item)}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: (i % 6) * 0.06 }}
+              className="group relative mb-4 block w-full break-inside-avoid overflow-hidden rounded-md lg:mb-5"
+              aria-label={`View ${item.title || item.category} ${isVideo ? 'video' : 'photo'}`}
+            >
+              {isVideo ? (
+                <video
+                  src={mediaUrlOf(item)}
+                  poster={item.imageUrl || undefined}
+                  muted
+                  playsInline
+                  preload="metadata"
+                  className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${i % 3 === 0 ? 'aspect-[4/5]' : 'aspect-[3/4]'}`}
+                />
+              ) : (
+                <SmartImage
+                  src={mediaUrlOf(item)}
+                  alt={item.title || `${item.category} photo at Sivasakthi men's salon`}
+                  aspect={i % 3 === 0 ? 'aspect-[4/5]' : 'aspect-[3/4]'}
+                  imgClassName="transition-transform duration-700 group-hover:scale-105"
+                />
+              )}
+              {isVideo && (
+                <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/50 text-cream backdrop-blur-sm transition-transform duration-300 group-hover:scale-110">
+                    <Play className="ml-0.5 h-6 w-6" />
+                  </span>
+                </span>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-ink/80 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              {item.title && (
+                <div className="absolute inset-x-0 bottom-0 translate-y-2 p-4 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                  <p className="text-left font-tamil text-lg text-cream">{item.title}</p>
+                  {item.description && (
+                    <p className="mt-0.5 line-clamp-1 text-left text-xs text-cream/70">{item.description}</p>
+                  )}
+                </div>
+              )}
+            </motion.button>
+          );
+        })}
       </div>
 
       <AnimatePresence>
@@ -117,7 +138,7 @@ export function GalleryGrid({ items }: GalleryGridProps) {
             onClick={() => setCurrent(null)}
             role="dialog"
             aria-modal="true"
-            aria-label="Image lightbox"
+            aria-label="Media lightbox"
           >
             <button
               type="button"
@@ -134,7 +155,7 @@ export function GalleryGrid({ items }: GalleryGridProps) {
                 e.stopPropagation();
                 prev();
               }}
-              aria-label="Previous image"
+              aria-label="Previous media"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -145,13 +166,24 @@ export function GalleryGrid({ items }: GalleryGridProps) {
                 e.stopPropagation();
                 next();
               }}
-              aria-label="Next image"
+              aria-label="Next media"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
 
             <div className="max-h-[85vh] max-w-5xl overflow-hidden rounded-md" onClick={(e) => e.stopPropagation()}>
-              <SmartImage src={current.imageUrl} alt={current.title || 'Gallery photo'} aspect="aspect-auto" className="h-[70vh] w-auto max-w-full" eager />
+              {mediaTypeOf(current) === 'video' ? (
+                <video
+                  src={mediaUrlOf(current)}
+                  poster={current.imageUrl || undefined}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="max-h-[80vh] w-auto max-w-full rounded-md bg-black object-contain"
+                />
+              ) : (
+                <SmartImage src={mediaUrlOf(current)} alt={current.title || 'Gallery photo'} aspect="aspect-auto" className="h-[70vh] w-auto max-w-full" eager />
+              )}
             </div>
           </motion.div>
         )}

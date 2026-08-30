@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useSalon } from '@/hooks/useContent';
-import { useSettingsMutations } from '@/features/admin/mutations';
+import { useSettingsMutations, useMediaMutations } from '@/features/admin/mutations';
 import { AdminCard, Toggle } from '@/features/admin/ui';
+import { MediaField } from '@/components/shared/MediaField';
 import { SECTIONS, type SectionMeta, type FieldDef, getPath, setPath, buildPayload, emptyOffer } from '@/features/admin/websiteContent';
 import { Pencil, X, Plus, Trash2, Check } from 'lucide-react';
-import type { SalonSettings } from '@/types';
+import type { MediaValue, SalonSettings } from '@/types';
 
 export default function AdminWebsitePage() {
   const { data: salon, isLoading } = useSalon();
@@ -64,10 +65,25 @@ function SectionEditorModal({
   onClose: () => void;
 }) {
   const mut = useSettingsMutations();
+  const { removeFile } = useMediaMutations();
   const [draft, setDraft] = useState<SalonSettings>(() => ({ ...salon }));
   const [saved, setSaved] = useState(false);
+  const pendingUploads = useRef<Set<string>>(new Set());
 
   const offers = useMemo(() => draft.offers, [draft.offers]);
+
+  const rawHeroMedia = draft.hero?.media;
+  const heroMediaValue: MediaValue | undefined =
+    rawHeroMedia && rawHeroMedia.mediaType !== 'none' && rawHeroMedia.url
+      ? ({ ...rawHeroMedia, mediaType: rawHeroMedia.mediaType as 'image' | 'video' } satisfies MediaValue)
+      : draft.hero?.videoUrl
+        ? {
+            mediaType: 'video',
+            sourceType: 'url',
+            url: draft.hero.videoUrl,
+            publicId: '',
+          } satisfies MediaValue
+        : undefined;
 
   const setValue = (key: string, value: unknown) => setDraft((d) => setPath(d, key, value));
 
@@ -78,10 +94,19 @@ function SectionEditorModal({
     });
   };
 
+  const closeModal = () => {
+    if (pendingUploads.current.size > 0) {
+      pendingUploads.current.forEach((publicId) => removeFile.mutate({ publicId, mediaType: 'image' }));
+    }
+    pendingUploads.current.clear();
+    onClose();
+  };
+
   const save = () => {
     const payload = buildPayload(draft, section);
     mut.save.mutate(payload, {
       onSuccess: () => {
+        pendingUploads.current.clear();
         setSaved(true);
         setTimeout(() => {
           setSaved(false);
@@ -92,7 +117,7 @@ function SectionEditorModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-10 lg:pt-16" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-10 lg:pt-16" onClick={closeModal}>
       <div
         className="w-full max-w-2xl rounded-md border border-white/10 bg-[#141414] p-6"
         onClick={(e) => e.stopPropagation()}
@@ -103,7 +128,7 @@ function SectionEditorModal({
             {section.tamil && <p className="font-tamil text-sm text-gold/80">{section.tamil}</p>}
             <p className="mt-1 text-xs text-zinc-500">{section.description}</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-md p-1 text-zinc-400 hover:text-white" aria-label="Close">
+          <button type="button" onClick={closeModal} className="rounded-md p-1 text-zinc-400 hover:text-white" aria-label="Close">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -125,6 +150,38 @@ function SectionEditorModal({
             )}
           </div>
 
+          {section.key === 'hero' && (
+            <div className="col-span-2">
+              <MediaField
+                label="Hero media (background)"
+                mediaType="both"
+                value={heroMediaValue}
+                onChange={(media) => {
+                  if (media) {
+                    setDraft((d) => ({
+                      ...d,
+                      hero: {
+                        ...d.hero,
+                        media: {
+                          mediaType: media.mediaType as 'image' | 'video',
+                          sourceType: media.sourceType,
+                          url: media.url,
+                          posterUrl: d.hero?.media?.posterUrl ?? '',
+                          publicId: media.publicId ?? '',
+                          autoplay: true,
+                          muted: true,
+                          loop: true,
+                          playsInline: true,
+                        },
+                      },
+                    }));
+                  }
+                }}
+                onRegisterPendingUpload={(publicId) => pendingUploads.current.add(publicId)}
+              />
+            </div>
+          )}
+
           {section.key === 'offers' && (
             <OffersEditor
               offers={offers}
@@ -142,7 +199,7 @@ function SectionEditorModal({
               <Check className="h-4 w-4" /> Saved
             </span>
           )}
-          <button type="button" onClick={onClose} className="rounded-md px-4 py-2 text-sm text-zinc-400 hover:text-white">
+          <button type="button" onClick={closeModal} className="rounded-md px-4 py-2 text-sm text-zinc-400 hover:text-white">
             Cancel
           </button>
           <button

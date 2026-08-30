@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { WeekDay } from '../models/BusinessHours';
+import { heroMediaSchema } from './media.validator';
 
 const dayHoursSchema = z.object({
   open: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Open time must be HH:mm'),
@@ -82,6 +83,7 @@ export const salonSettingsSchema = z.object({
         videoUrl: z.string().max(600).optional().default(''),
         posterUrl: z.string().max(600).optional().default(''),
         mobileImageUrl: z.string().max(600).optional().default(''),
+        media: heroMediaSchema.optional(),
       })
       .optional(),
     about: z

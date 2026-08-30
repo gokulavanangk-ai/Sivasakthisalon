@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
@@ -8,6 +8,7 @@ import path from 'path';
 import { env } from './config/env';
 import { logger } from './config/logger';
 import { apiLimiter } from './middleware/rateLimiter';
+import { connectDb } from './config/db';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler';
 
 import authRoutes from './routes/auth.routes';
@@ -20,6 +21,7 @@ import bookingRoutes from './routes/booking.routes';
 import businessHoursRoutes from './routes/businessHours.routes';
 import barberRoutes from './routes/barber.routes';
 import faqRoutes from './routes/faq.routes';
+import mediaRoutes from './routes/media.routes';
 import { UPLOAD_DIR } from './middleware/upload';
 
 const app = express();
@@ -57,6 +59,20 @@ app.use(['/api'], (req, res, next) => {
   return apiLimiter(req, res, next);
 });
 
+// Connect to MongoDB on demand for every DB-backed request. The long-running
+// `server.ts` bootstrap already calls connectDb() before listening; this
+// middleware is what lets the same Express app work as a Vercel serverless
+// function, where only the app module is imported and there is no bootstrap
+// step. connectDb() is idempotent, so in the long-running path this is a no-op.
+app.use(async (_req: Request, _res: Response, next: NextFunction) => {
+  try {
+    await connectDb();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/salon', salonRoutes);
 app.use('/api/services', serviceRoutes);
@@ -67,6 +83,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/hours', businessHoursRoutes);
 app.use('/api/barbers', barberRoutes);
 app.use('/api/faqs', faqRoutes);
+app.use('/api/admin/media', mediaRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

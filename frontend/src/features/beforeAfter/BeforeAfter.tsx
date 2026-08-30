@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { MoveHorizontal } from 'lucide-react';
 import { useGallery, useSalon } from '@/hooks/useContent';
 import { SectionHeading } from '@/components/shared/SectionHeading';
+import { mediaTypeOf, mediaUrlOf } from '@/lib/utils';
 
 interface Pair {
   id: string;
@@ -10,9 +11,10 @@ interface Pair {
   after: string;
 }
 
-function buildPairs(items: { _id: string; title: string; imageUrl: string }[]): Pair[] {
+function buildPairs(items: { _id: string; title: string; imageUrl: string; media?: { url?: string; mediaType?: string } }[]): Pair[] {
+  const images = items.filter((item) => mediaTypeOf(item) === 'image');
   const map = new Map<string, Pair>();
-  for (const item of items) {
+  for (const item of images) {
     const t = item.title?.trim() ?? '';
     const before = t.match(/(.+)\s+before$/i);
     const after = t.match(/(.+)\s+after$/i);
@@ -20,8 +22,9 @@ function buildPairs(items: { _id: string; title: string; imageUrl: string }[]): 
     if (!key) continue;
     if (!map.has(key)) map.set(key, { id: key, label: key, before: '', after: '' });
     const pair = map.get(key)!;
-    if (before && !pair.before) pair.before = item.imageUrl;
-    if (after && !pair.after) pair.after = item.imageUrl;
+    const url = mediaUrlOf(item);
+    if (before && !pair.before) pair.before = url;
+    if (after && !pair.after) pair.after = url;
   }
   return [...map.values()].filter((p) => p.before && p.after);
 }

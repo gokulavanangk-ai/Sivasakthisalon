@@ -9,11 +9,14 @@ import type {
   Faq,
   GalleryItem,
   Hairstyle,
+  LocalMediaFile,
+  MediaType,
   Paginated,
   Review,
   SalonSettings,
   Service,
   SlotInfo,
+  UploadedMedia,
 } from '@/types';
 
 // ---------- Public content ----------
@@ -83,11 +86,21 @@ export const updateHairstyle = (id: string, data: Partial<Hairstyle>) => unwrap<
 export const deleteHairstyle = (id: string) => unwrap<null>(adminApi.delete(`/hairstyles/${id}`));
 
 // ---------- Admin: gallery ----------
-export const uploadGalleryImage = (form: FormData) =>
-  unwrap<GalleryItem>(adminApiForm.post('/gallery', form));
-export const updateGalleryImage = (id: string, form: FormData) =>
-  unwrap<GalleryItem>(adminApiForm.put(`/gallery/${id}`, form));
-export const deleteGalleryImage = (id: string) => unwrap<null>(adminApi.delete(`/gallery/${id}`));
+export const createGalleryItem = (data: Partial<GalleryItem>) =>
+  unwrap<GalleryItem>(adminApi.post('/gallery', data));
+export const updateGalleryItem = (id: string, data: Partial<GalleryItem>) =>
+  unwrap<GalleryItem>(adminApi.put(`/gallery/${id}`, data));
+export const deleteGalleryItem = (id: string) => unwrap<null>(adminApi.delete(`/gallery/${id}`));
+
+// ---------- Admin: media ----------
+export const uploadMediaFile = (file: File) => {
+  const form = new FormData();
+  form.append('file', file);
+  return unwrap<UploadedMedia>(adminApiForm.post('/admin/media/upload', form));
+};
+export const fetchLocalMedia = () => unwrap<LocalMediaFile[]>(adminApi.get('/admin/media/local'));
+export const deleteMediaFile = (publicId: string, mediaType: MediaType) =>
+  unwrap<null>(adminApi.delete(`/admin/media/${encodeURIComponent(publicId)}`, { params: { mediaType } }));
 
 // ---------- Admin: reviews ----------
 export const createReview = (data: Partial<Review>) => unwrap<Review>(adminApi.post('/reviews', data));

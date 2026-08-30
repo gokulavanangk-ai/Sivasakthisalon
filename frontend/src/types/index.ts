@@ -14,6 +14,36 @@ export interface Paginated<T> {
 
 export type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rejected';
 
+export type MediaType = 'image' | 'video';
+export type MediaSource = 'upload' | 'url' | 'local';
+
+export interface MediaValue {
+  mediaType: MediaType;
+  sourceType: MediaSource;
+  url: string;
+  publicId?: string;
+  alt?: string;
+  title?: string;
+  isActive?: boolean;
+  order?: number;
+}
+
+export interface UploadedMedia {
+  url: string;
+  publicId: string;
+  mediaType: MediaType;
+  sourceType: MediaSource;
+  size: number;
+  originalName?: string;
+}
+
+export interface LocalMediaFile {
+  path: string;
+  name: string;
+  mediaType: MediaType;
+  size: number;
+}
+
 export interface SectionHeadingCopy {
   eyebrow: string;
   englishTitle: string;
@@ -104,6 +134,17 @@ export interface SalonSettings {
     videoUrl: string;
     posterUrl: string;
     mobileImageUrl: string;
+    media?: {
+      mediaType: MediaType | 'none';
+      sourceType: MediaSource;
+      url: string;
+      posterUrl: string;
+      publicId?: string;
+      autoplay: boolean;
+      muted: boolean;
+      loop: boolean;
+      playsInline: boolean;
+    };
   };
   about: {
     heading: string;
@@ -154,6 +195,7 @@ export interface Service {
   isActive: boolean;
   isSignature: boolean;
   sortOrder: number;
+  media?: MediaValue;
 }
 
 export type HairstyleCategory =
@@ -181,6 +223,9 @@ export interface Hairstyle {
   imageUrl: string;
   isActive: boolean;
   sortOrder: number;
+  image?: MediaValue;
+  thumbnail?: MediaValue;
+  video?: MediaValue;
 }
 
 export type GalleryCategory =
@@ -188,7 +233,9 @@ export type GalleryCategory =
   | 'haircuts'
   | 'beard-styles'
   | 'customers'
-  | 'atmosphere';
+  | 'atmosphere'
+  | 'staff'
+  | 'other';
 
 export interface GalleryItem {
   _id: string;
@@ -199,6 +246,7 @@ export interface GalleryItem {
   publicId: string;
   sortOrder: number;
   isActive: boolean;
+  media?: MediaValue;
 }
 
 export interface Review {

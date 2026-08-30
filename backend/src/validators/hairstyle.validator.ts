@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { HAIRSTYLE_CATEGORIES, FACE_SHAPES, STYLE_TYPES, HAIR_TYPES } from '../models/Hairstyle';
+import { mediaSchema } from './media.validator';
 
 export const hairstyleSchema = z.object({
   body: z.object({
@@ -12,6 +13,9 @@ export const hairstyleSchema = z.object({
     hairTypes: z.array(z.enum(HAIR_TYPES)).optional().default([]),
     imageUrl: z.string().trim().max(600).optional().default(''),
     isActive: z.boolean().optional(),
-    sortOrder: z.number().int().min(0).optional(),
+    sortOrder: z.coerce.number().int().min(0).optional().default(0),
+    image: mediaSchema.optional(),
+    thumbnail: mediaSchema.optional(),
+    video: mediaSchema.optional(),
   }),
 });

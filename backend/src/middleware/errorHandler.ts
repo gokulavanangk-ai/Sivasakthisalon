@@ -12,6 +12,16 @@ export function notFoundHandler(_req: Request, res: Response): void {
   });
 }
 
+function isDbConnectionError(err: Error): boolean {
+  return (
+    err.name === 'MongooseServerSelectionError' ||
+    err.name === 'MongoServerSelectionError' ||
+    err.name === 'MongoNetworkError' ||
+    err.name === 'MongoTimeoutError' ||
+    (typeof err.message === 'string' && err.message.includes('buffering timed out'))
+  );
+}
+
 export function errorHandler(
   err: unknown,
   req: Request,
@@ -38,16 +48,29 @@ export function errorHandler(
     message = 'Duplicate value already exists';
     errorCode = 'DUPLICATE_ENTRY';
   } else if (err instanceof Error) {
-    message = err.message;
+    // Database connectivity problems make the service temporarily unavailable.
+    if (isDbConnectionError(err)) {
+      status = 503;
+      errorCode = 'DB_UNAVAILABLE';
+    } else if (err.name === 'ValidationError') {
+      status = 400;
+      errorCode = 'VALIDATION_ERROR';
+    }
+    // Never leak internal error messages or stack traces to the browser in
+    // production. The real cause is logged server-side below.
     if (!env.isProduction) {
+      message = err.message;
       details = err.stack;
     }
   }
 
   if (status >= 500) {
-    logger.error({ err: message, url: req.originalUrl }, 'Request failed');
+    logger.error(
+      { err, method: req.method, url: req.originalUrl, errorCode },
+      'Request failed',
+    );
   } else {
-    logger.warn({ message, url: req.originalUrl }, 'Request rejected');
+    logger.warn({ message, errorCode, url: req.originalUrl }, 'Request rejected');
   }
 
   res.status(status).json({

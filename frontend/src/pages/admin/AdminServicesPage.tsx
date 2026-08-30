@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useServices } from '@/hooks/useContent';
-import { useServiceMutations } from '@/features/admin/mutations';
+import { useServiceMutations, useMediaMutations } from '@/features/admin/mutations';
 import { AdminCard, Toggle } from '@/features/admin/ui';
-import { Pencil, Trash2, Plus, X } from 'lucide-react';
+import { MediaField } from '@/components/shared/MediaField';
+import { Pencil, Trash2, Plus, X, Loader2 } from 'lucide-react';
 import type { Service } from '@/types';
 
 const emptyForm: Partial<Service> = {
@@ -14,6 +15,7 @@ const emptyForm: Partial<Service> = {
   price: null,
   priceVisible: false,
   imageUrl: '',
+  media: undefined,
   category: 'haircut',
   isActive: true,
   isSignature: false,
@@ -23,15 +25,32 @@ const emptyForm: Partial<Service> = {
 export default function AdminServicesPage() {
   const { data, isLoading } = useServices({ includeInactive: true });
   const mut = useServiceMutations();
+  const { removeFile } = useMediaMutations();
   const [form, setForm] = useState<Partial<Service> | null>(null);
+  const [saving, setSaving] = useState(false);
+  const pendingUploads = useRef<Set<string>>(new Set());
+
+  const close = () => {
+    if (pendingUploads.current.size > 0) {
+      pendingUploads.current.forEach((publicId) => removeFile.mutate({ publicId, mediaType: 'image' }));
+    }
+    pendingUploads.current.clear();
+    setForm(null);
+  };
 
   const save = () => {
     if (!form) return;
+    setSaving(true);
     const payload = { ...form };
+    const onDone = () => {
+      pendingUploads.current.clear();
+      setSaving(false);
+      setForm(null);
+    };
     if (form._id) {
-      mut.update.mutate({ id: form._id, data: payload }, { onSuccess: () => setForm(null) });
+      mut.update.mutate({ id: form._id, data: payload }, { onSuccess: onDone, onError: () => setSaving(false) });
     } else {
-      mut.create.mutate(payload, { onSuccess: () => setForm(null) });
+      mut.create.mutate(payload, { onSuccess: onDone, onError: () => setSaving(false) });
     }
   };
 
@@ -44,7 +63,7 @@ export default function AdminServicesPage() {
         </div>
         <button
           type="button"
-          onClick={() => setForm({ ...emptyForm })}
+          onClick={() => { pendingUploads.current.clear(); setForm({ ...emptyForm }); }}
           className="inline-flex items-center gap-2 rounded-md bg-gold px-4 py-2 text-sm font-semibold text-black hover:bg-gold-300"
         >
           <Plus className="h-4 w-4" /> Add service
@@ -108,11 +127,11 @@ export default function AdminServicesPage() {
 
       {/* Modal */}
       {form && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-16" onClick={() => setForm(null)}>
-          <div className="w-full max-w-lg rounded-md border border-white/10 bg-[#141414] p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-10 lg:pt-16" onClick={close}>
+          <div className="my-4 w-full max-w-lg rounded-md border border-white/10 bg-[#141414] p-6" onClick={(e) => e.stopPropagation()}>
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">{form._id ? 'Edit service' : 'New service'}</h2>
-              <button type="button" onClick={() => setForm(null)} className="rounded-md p-1 text-zinc-400 hover:text-white" aria-label="Close">
+              <button type="button" onClick={close} className="rounded-md p-1 text-zinc-400 hover:text-white" aria-label="Close">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -131,6 +150,14 @@ export default function AdminServicesPage() {
               <Field label="Description">
                 <textarea className="input-dark min-h-[80px]" value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </Field>
+              <MediaField
+                label="Image"
+                mediaType="image"
+                value={form.media ?? undefined}
+                onChange={(media) => setForm((f) => (f ? { ...f, media: media ?? undefined } : f))}
+                onRegisterPendingUpload={(publicId) => pendingUploads.current.add(publicId)}
+                aspect="aspect-video"
+              />
               <div className="grid grid-cols-3 gap-3">
                 <Field label="Duration (min)">
                   <input
@@ -149,16 +176,13 @@ export default function AdminServicesPage() {
                     placeholder="Optional"
                   />
                 </Field>
-                <Field label="Image URL">
-                  <input className="input-dark" value={form.imageUrl ?? ''} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="https://…" />
+                <Field label="Sort order">
+                  <input type="number" className="input-dark" value={form.sortOrder ?? 0} onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })} />
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Category">
                   <input className="input-dark" value={form.category ?? ''} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="haircut" />
-                </Field>
-                <Field label="Sort order">
-                  <input type="number" className="input-dark" value={form.sortOrder ?? 0} onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })} />
                 </Field>
               </div>
               <div className="space-y-1 rounded-md border border-white/10 p-3">
@@ -167,16 +191,19 @@ export default function AdminServicesPage() {
                 <Toggle label="Active" checked={Boolean(form.isActive)} onChange={(v) => setForm({ ...form, isActive: v })} />
               </div>
             </div>
-            <div className="mt-6 flex justify-end gap-2">
-              <button type="button" onClick={() => setForm(null)} className="rounded-md px-4 py-2 text-sm text-zinc-400 hover:text-white">
+            <div className="mt-6 flex items-center justify-end gap-2">
+              {mut.create.isError && <p className="mr-auto text-xs text-red-400">{(mut.create.error as Error)?.message}</p>}
+              {mut.update.isError && <p className="mr-auto text-xs text-red-400">{(mut.update.error as Error)?.message}</p>}
+              <button type="button" onClick={close} className="rounded-md px-4 py-2 text-sm text-zinc-400 hover:text-white">
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={save}
-                disabled={!form.tamilName || !form.englishName || mut.create.isPending || mut.update.isPending}
-                className="rounded-md bg-gold px-5 py-2 text-sm font-semibold text-black hover:bg-gold-300 disabled:opacity-50"
+                disabled={!form.tamilName || !form.englishName || saving || mut.create.isPending || mut.update.isPending}
+                className="inline-flex items-center gap-2 rounded-md bg-gold px-5 py-2 text-sm font-semibold text-black hover:bg-gold-300 disabled:opacity-50"
               >
+                {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                 Save
               </button>
             </div>

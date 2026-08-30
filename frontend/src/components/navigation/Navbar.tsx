@@ -53,11 +53,11 @@ export function Navbar() {
       )}
     >
       <div className="container-x flex h-16 items-center justify-between sm:h-20">
-        <Link to="/" className="group flex items-center gap-3" aria-label="Go to homepage">
+        <Link to="/" className="group flex h-full items-center gap-3" aria-label="Go to homepage">
           {salon?.logo?.url ? (
-            <img src={salon.logo.url} alt="Sivasakthi Men's Salon logo" className="h-10 w-10 rounded-full object-cover" />
+            <img src={salon.logo.url} alt="Sivasakthi Men's Salon logo" className="h-full w-auto object-cover" />
           ) : (
-            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-gold/60 font-tamil text-lg text-gold">
+            <span className="flex h-full aspect-square items-center justify-center border border-gold/60 font-tamil text-lg text-gold">
               சி
             </span>
           )}

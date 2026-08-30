@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Barber, BookingStatus, Faq, Hairstyle, Review, Service } from '@/types';
+import type { Barber, BookingStatus, Faq, GalleryItem, Hairstyle, MediaType, Review, Service } from '@/types';
 import {
   createService,
   updateService,
@@ -7,9 +7,12 @@ import {
   createHairstyle,
   updateHairstyle,
   deleteHairstyle,
-  uploadGalleryImage,
-  updateGalleryImage,
-  deleteGalleryImage,
+  createGalleryItem,
+  updateGalleryItem,
+  deleteGalleryItem,
+  uploadMediaFile,
+  fetchLocalMedia,
+  deleteMediaFile,
   createReview,
   updateReview,
   deleteReview,
@@ -88,10 +91,31 @@ export function useFaqMutations() {
 
 export function useGalleryMutations() {
   return {
-    create: useCrudTyped(['gallery'], uploadGalleryImage, 'Image uploaded'),
-    update: useCrudTyped(['gallery'], ({ id, form }: { id: string; form: FormData }) => updateGalleryImage(id, form), 'Image updated'),
-    remove: useCrudTyped(['gallery'], deleteGalleryImage, 'Image deleted'),
+    create: useCrudTyped(['gallery'], createGalleryItem, 'Media added'),
+    update: useCrudTyped(['gallery'], ({ id, data }: { id: string; data: Partial<GalleryItem> }) => updateGalleryItem(id, data), 'Media updated'),
+    remove: useCrudTyped(['gallery'], deleteGalleryItem, 'Media deleted'),
   };
+}
+
+export function useMediaMutations() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const upload = useMutation({
+    mutationFn: uploadMediaFile,
+    onError: (e) => toast(errMsg(e), 'error'),
+  });
+  const local = useMutation({
+    mutationFn: fetchLocalMedia,
+  });
+  const removeFile = useMutation({
+    mutationFn: ({ publicId, mediaType }: { publicId: string; mediaType: MediaType }) =>
+      deleteMediaFile(publicId, mediaType),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['media'] });
+    },
+    onError: (e) => toast(errMsg(e), 'error'),
+  });
+  return { upload, local, removeFile };
 }
 
 export function useSettingsMutations() {

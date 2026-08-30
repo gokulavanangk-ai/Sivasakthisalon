@@ -1,5 +1,15 @@
 import mongoose, { type Document, type Schema } from 'mongoose';
 
+export interface ServiceMedia {
+  mediaType: 'image' | 'video';
+  sourceType: 'upload' | 'url' | 'local';
+  url: string;
+  publicId: string;
+  alt: string;
+  isActive: boolean;
+  order: number;
+}
+
 export interface ServiceDocument extends Document {
   tamilName: string;
   englishName: string;
@@ -13,7 +23,21 @@ export interface ServiceDocument extends Document {
   isActive: boolean;
   isSignature: boolean;
   sortOrder: number;
+  media: ServiceMedia;
 }
+
+const mediaSchema: Schema = new mongoose.Schema(
+  {
+    mediaType: { type: String, enum: ['image', 'video'], default: 'image' },
+    sourceType: { type: String, enum: ['upload', 'url', 'local'], default: 'url' },
+    url: { type: String, default: '' },
+    publicId: { type: String, default: '' },
+    alt: { type: String, default: '' },
+    isActive: { type: Boolean, default: true },
+    order: { type: Number, default: 0 },
+  },
+  { _id: false },
+);
 
 const serviceSchema: Schema = new mongoose.Schema(
   {
@@ -29,6 +53,7 @@ const serviceSchema: Schema = new mongoose.Schema(
     isActive: { type: Boolean, default: true, index: true },
     isSignature: { type: Boolean, default: false },
     sortOrder: { type: Number, default: 0, index: true },
+    media: { type: mediaSchema, default: () => ({}) },
   },
   { timestamps: true },
 );

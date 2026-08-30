@@ -1,10 +1,11 @@
+import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowDown, ArrowUpRight } from 'lucide-react';
 import { useSalon } from '@/hooks/useContent';
 import { useScrollProgress } from '@/hooks/useScrollProgress';
 import { Magnetic } from '@/components/shared/Magnetic';
 import { SmartImage } from '@/components/shared/SmartImage';
-import { businessInfoOf } from '@/lib/utils';
+import { businessInfoOf, resolveHeroMedia } from '@/lib/utils';
 
 const ASCENT_GREY =
   'linear-gradient(to bottom, rgba(8,8,8,0.55) 0%, rgba(8,8,8,0.35) 40%, rgba(8,8,8,0.9) 100%)';
@@ -13,6 +14,7 @@ export function HeroSection() {
   const { data: salon } = useSalon();
   const progress = useScrollProgress();
   const reduced = useReducedMotion();
+  const [videoFailed, setVideoFailed] = useState(false);
 
   const hero = salon?.hero;
   const bi = businessInfoOf(salon);
@@ -21,9 +23,15 @@ export function HeroSection() {
   const subtitle = hero?.subtitle || `${bi.experienceYears}+ YEARS OF EXPERIENCE`;
   const ctaPrimary = salon?.sections?.hero?.ctaPrimary ?? 'Book Your Style';
   const ctaSecondary = salon?.sections?.hero?.ctaSecondary ?? 'Explore Our Style';
-  const showVideo = salon?.toggles?.heroVideoEnabled !== false && Boolean(hero?.videoUrl);
 
-  const backgroundImage = hero?.mobileImageUrl || hero?.posterUrl;
+  const { videoUrl, imageUrl, poster } = resolveHeroMedia(hero);
+
+  const showVideo =
+    salon?.toggles?.heroVideoEnabled !== false &&
+    Boolean(videoUrl) &&
+    !videoFailed;
+
+  const backgroundImage = imageUrl;
 
   return (
     <section
@@ -33,17 +41,19 @@ export function HeroSection() {
     >
       {/* Background */}
       <div className="absolute inset-0 overflow-hidden bg-ink">
-        {showVideo && hero?.videoUrl ? (
+        {showVideo ? (
           <video
+            key={videoUrl}
             className="h-full w-full object-cover"
-            src={hero.videoUrl}
-            poster={hero.posterUrl || undefined}
+            src={videoUrl}
+            poster={poster || undefined}
             autoPlay
             muted
             loop
             playsInline
             preload="metadata"
             aria-hidden="true"
+            onError={() => setVideoFailed(true)}
           />
         ) : backgroundImage ? (
           <div className="h-full w-full animate-slow-zoom">

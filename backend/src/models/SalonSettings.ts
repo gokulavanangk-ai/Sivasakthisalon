@@ -11,6 +11,18 @@ export interface GalleryConfig {
   categories: string[];
 }
 
+export interface HeroMedia {
+  mediaType: 'image' | 'video' | 'none';
+  sourceType: 'upload' | 'url' | 'local';
+  url: string;
+  posterUrl: string;
+  publicId: string;
+  autoplay: boolean;
+  muted: boolean;
+  loop: boolean;
+  playsInline: boolean;
+}
+
 export interface FeatureToggles {
   pricingVisible: boolean;
   beforeAfterEnabled: boolean;
@@ -114,6 +126,7 @@ export interface SalonSettingsDocument extends Document {
     videoUrl: string;
     posterUrl: string;
     mobileImageUrl: string;
+    media: HeroMedia;
   };
   about: {
     heading: string;
@@ -169,6 +182,17 @@ const salonSchema: Schema = new mongoose.Schema(
       videoUrl: { type: String, default: '' },
       posterUrl: { type: String, default: '' },
       mobileImageUrl: { type: String, default: '' },
+      media: {
+        mediaType: { type: String, enum: ['image', 'video', 'none'], default: 'image' },
+        sourceType: { type: String, enum: ['upload', 'url', 'local'], default: 'url' },
+        url: { type: String, default: '' },
+        posterUrl: { type: String, default: '' },
+        publicId: { type: String, default: '' },
+        autoplay: { type: Boolean, default: true },
+        muted: { type: Boolean, default: true },
+        loop: { type: Boolean, default: true },
+        playsInline: { type: Boolean, default: true },
+      },
     },
     about: {
       heading: { type: String, default: '' },
