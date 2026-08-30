@@ -18,7 +18,7 @@ function readJwtSecret(): string {
   if (process.env.NODE_ENV === 'production') {
     console.error(
       '[sivasakthi-salon-api] CRITICAL: JWT_SECRET is not set in production. ' +
-        'Admin authentication is degraded until Vercel environment variable JWT_SECRET is configured.',
+        'Admin authentication is degraded until the Render environment variable JWT_SECRET is configured.',
     );
     return crypto.randomBytes(32).toString('hex');
   }

@@ -17,7 +17,15 @@ export const loginHandler = asyncHandler(async (req: Request, res: Response) => 
     } Path=/; Max-Age=${7 * 24 * 60 * 60}`,
   );
 
-  ok(res, result.admin, 'Login successful');
+  // `token` is the same JWT as the cookie. Cross-site deployments (e.g.
+  // Vercel frontend -> Render API) can hit it back via `Authorization:
+  // Bearer` when the browser rejects the third-party cookie.
+  res.status(200).json({
+    success: true,
+    message: 'Login successful',
+    data: result.admin,
+    token: result.token,
+  });
 });
 
 export const logoutHandler = asyncHandler(async (_req: Request, res: Response) => {

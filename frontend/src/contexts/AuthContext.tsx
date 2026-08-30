@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AdminUser } from '@/types';
 import { authLogin, authLogout, fetchMe } from '@/services/api';
+import { ADMIN_TOKEN_KEY } from '@/lib/apiClient';
 
 interface AuthContextValue {
   user: AdminUser | null;
@@ -34,7 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (identifier: string, password: string) => {
-      const admin = await authLogin(identifier, password);
+      const { admin, token } = await authLogin(identifier, password);
+      if (token) window.sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
       setManualUser(admin);
       queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
     },
@@ -47,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore */
     }
+    window.sessionStorage.removeItem(ADMIN_TOKEN_KEY);
     setManualUser(null);
     queryClient.setQueryData(['auth', 'me'], null);
     queryClient.clear();

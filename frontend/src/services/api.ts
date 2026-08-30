@@ -1,7 +1,6 @@
 import { publicApi, adminApi, adminApiForm, unwrap, ApiClientError } from '@/lib/apiClient';
 import type {
   AdminUser,
-  ApiResponse,
   Barber,
   Booking,
   BookingStatus,
@@ -59,8 +58,11 @@ export const lookupBooking = (bookingId: string) =>
 
 // ---------- Auth ----------
 export const authLogin = async (identifier: string, password: string) => {
-  const { data } = await adminApi.post<ApiResponse<AdminUser>>('/auth/login', { identifier, password });
-  return data.data;
+  const { data } = await adminApi.post<{ success: boolean; data: AdminUser; token?: string }>(
+    '/auth/login',
+    { identifier, password },
+  );
+  return { admin: data.data, token: data.token ?? '' };
 };
 export const authLogout = () => adminApi.post('/auth/logout');
 export const fetchMe = () => unwrap<AdminUser>(adminApi.get('/auth/me'));

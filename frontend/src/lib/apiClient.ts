@@ -50,14 +50,41 @@ publicApi.interceptors.response.use((res) => res, rejectWithClientError);
 
 /**
  * Admin API client — used by authenticated routes and mutations.
- * Sends the HttpOnly session cookie and redirects to the admin login
- * when an authenticated request returns 401 (expired/revoked session).
+ * Sends the HttpOnly session cookie when the browser accepts it, and always
+ * sends the JWT via `Authorization: Bearer` (persisted in sessionStorage) so
+ * cross-site deployments (Vercel frontend -> Render API) keep working even
+ * when browsers reject third-party cookies.
+ * Redirects to the admin login when an authenticated request returns 401.
  */
+export const ADMIN_TOKEN_KEY = 'sivasakthi_admin_token';
+
+function getAdminToken(): string | null {
+  try {
+    return window.sessionStorage.getItem(ADMIN_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function clearAdminToken(): void {
+  try {
+    window.sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 export const adminApi = axios.create({
   baseURL: API_URL,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
   timeout: 20000,
+});
+
+adminApi.interceptors.request.use((config) => {
+  const token = getAdminToken();
+  if (token) config.headers.set('Authorization', `Bearer ${token}`);
+  return config;
 });
 
 adminApi.interceptors.response.use(
@@ -67,6 +94,7 @@ adminApi.interceptors.response.use(
     const url = error.config?.url ?? '';
     const isLoginAttempt = url.includes('/auth/login');
     const isOnLoginPage = window.location.pathname.startsWith('/admin/login');
+    if (status === 401) clearAdminToken();
     if (status === 401 && !isLoginAttempt && !isOnLoginPage) {
       window.location.assign('/admin/login');
     }
@@ -91,11 +119,18 @@ export const adminApiForm = axios.create({
   timeout: 30000,
 });
 
+adminApiForm.interceptors.request.use((config) => {
+  const token = getAdminToken();
+  if (token) config.headers.set('Authorization', `Bearer ${token}`);
+  return config;
+});
+
 adminApiForm.interceptors.response.use(
   (res) => res,
   (error: AxiosError) => {
     const status = error.response?.status;
     const isOnLoginPage = window.location.pathname.startsWith('/admin/login');
+    if (status === 401) clearAdminToken();
     if (status === 401 && !isOnLoginPage) {
       window.location.assign('/admin/login');
     }
