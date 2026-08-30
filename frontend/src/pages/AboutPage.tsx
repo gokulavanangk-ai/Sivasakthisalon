@@ -29,10 +29,11 @@ export default function AboutPage() {
   const { data: hairstyles } = useHairstyles();
   const { data: gallery } = useGallery();
   const bi = businessInfoOf(salon);
-  const years = bi.experienceYears;
+  const years = bi.experienceYears || 0;
+  const hasYears = years > 0;
 
   const stats = [
-    { value: `${years}+`, label: 'Years of craft' },
+    ...(hasYears ? [{ value: `${years}+`, label: 'Years of craft' }] : []),
     { value: services?.items?.length ?? 0, label: 'Services' },
     { value: hairstyles?.length ?? 0, label: 'Signature styles' },
     { value: gallery?.length ?? 0, label: 'Gallery moments' },
@@ -79,7 +80,7 @@ export default function AboutPage() {
       </div>
 
       <div className="container-x mt-24">
-        <Marquee items={['Trusted since day one', `${years}+ years`, 'Local · Family · Premium']} />
+        <Marquee items={['Trusted since day one', ...(hasYears ? [`${years}+ years`] : []), 'Local · Family · Premium']} />
       </div>
 
       <div className="container-x mt-24 grid gap-6 md:grid-cols-3">

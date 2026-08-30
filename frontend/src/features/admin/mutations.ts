@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Barber, BookingStatus, Faq, GalleryItem, Hairstyle, MediaType, Review, Service } from '@/types';
+import type { Barber, BookingStatus, Faq, GalleryItem, Hairstyle, MediaType, Quote, Review, Service } from '@/types';
 import {
   createService,
   updateService,
@@ -22,6 +22,9 @@ import {
   createFaq,
   updateFaq,
   deleteFaq,
+  createQuote,
+  updateQuote,
+  deleteQuote,
   updateSalon,
   uploadLogo,
   deleteLogo,
@@ -86,6 +89,14 @@ export function useFaqMutations() {
     create: useCrudTyped(['faqs'], createFaq, 'FAQ created'),
     update: useCrudTyped(['faqs'], ({ id, data }: { id: string; data: Partial<Faq> }) => updateFaq(id, data), 'FAQ updated'),
     remove: useCrudTyped(['faqs'], deleteFaq, 'FAQ deleted'),
+  };
+}
+
+export function useQuoteMutations() {
+  return {
+    create: useCrudTyped(['quotes'], createQuote, 'Quote created'),
+    update: useCrudTyped(['quotes'], ({ id, data }: { id: string; data: Partial<Quote> }) => updateQuote(id, data), 'Quote updated'),
+    remove: useCrudTyped(['quotes'], deleteQuote, 'Quote deleted'),
   };
 }
 

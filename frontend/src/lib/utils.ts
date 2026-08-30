@@ -1,13 +1,18 @@
 import { clsx, type ClassValue } from 'clsx';
-import { BUSINESS_FALLBACK } from '@/constants';
 import type { BusinessInfo, MediaType, SalonSettings } from '@/types';
 
 export function cn(...inputs: ClassValue[]): string {
   return clsx(inputs);
 }
 
+/**
+ * Returns the salon's shared business information straight from MongoDB (the
+ * single source of truth). No hardcoded fallbacks — the backend guarantees the
+ * businessInfo object is always populated, so the DB is the only source of the
+ * salon's name, phone, address, socials, and experience years.
+ */
 export function businessInfoOf(salon?: SalonSettings): BusinessInfo {
-  return { ...BUSINESS_FALLBACK, ...(salon?.businessInfo ?? {}) } as BusinessInfo;
+  return (salon?.businessInfo ?? {}) as BusinessInfo;
 }
 
 // ---------- Media helpers ----------

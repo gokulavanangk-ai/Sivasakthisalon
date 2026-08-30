@@ -49,7 +49,7 @@ export function CtaSection() {
                   <ArrowUpRight className="h-4 w-4" />
                 </a>
               </Magnetic>
-            ) : (
+            ) : bi.phone ? (
               <a
                 href={`tel:+91${bi.phone}`}
                 className="btn-primary"
@@ -57,7 +57,7 @@ export function CtaSection() {
               >
                 Call Now
               </a>
-            )}
+            ) : null}
             <a href="/styles" className="btn-ghost" aria-label="Explore our hairstyles">
               {cta.secondaryCta}
             </a>

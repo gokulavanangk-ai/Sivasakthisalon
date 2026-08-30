@@ -60,16 +60,24 @@ export default function ContactPage() {
       <div className="container-x grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Reveal>
           <ContactCard title={contact.callTitle} tamil={contact.callTamil}>
-            <a href={`tel:+91${phone}`} className="text-xl text-cream hover:text-gold">
-              {formatPhone(phone)}
-            </a>
+            {phone ? (
+              <a href={`tel:+91${phone}`} className="text-xl text-cream hover:text-gold">
+                {formatPhone(phone)}
+              </a>
+            ) : (
+              <span className="text-muted/50">—</span>
+            )}
           </ContactCard>
         </Reveal>
         <Reveal delay={0.05}>
           <ContactCard title={contact.whatsappTitle} tamil={contact.whatsappTamil}>
-            <a href={whatsappLink(bi.whatsapp)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 hover:text-cream">
-              <MessageCircle className="h-4 w-4 text-gold" /> Chat with us
-            </a>
+            {whatsappLink(bi.whatsapp) ? (
+              <a href={whatsappLink(bi.whatsapp)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 hover:text-cream">
+                <MessageCircle className="h-4 w-4 text-gold" /> Chat with us
+              </a>
+            ) : (
+              <span className="text-muted/50">—</span>
+            )}
           </ContactCard>
         </Reveal>
         <Reveal delay={0.1}>

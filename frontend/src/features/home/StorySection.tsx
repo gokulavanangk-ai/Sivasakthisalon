@@ -6,7 +6,7 @@ import { businessInfoOf } from '@/lib/utils';
 export function StorySection() {
   const { data: salon } = useSalon();
   const bi = businessInfoOf(salon);
-  const years = bi.experienceYears;
+  const years = bi.experienceYears || 0;
   const heading = salon?.about?.heading || `${years} ஆண்டுகளின் அனுபவம். ஒரே நோக்கம்.`;
   const body =
     salon?.about?.body ||

@@ -20,6 +20,7 @@ import bookingRoutes from './routes/booking.routes';
 import businessHoursRoutes from './routes/businessHours.routes';
 import barberRoutes from './routes/barber.routes';
 import faqRoutes from './routes/faq.routes';
+import quoteRoutes from './routes/quote.routes';
 import mediaRoutes from './routes/media.routes';
 import { getUploadDir } from './middleware/upload';
 
@@ -127,6 +128,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/hours', businessHoursRoutes);
 app.use('/api/barbers', barberRoutes);
 app.use('/api/faqs', faqRoutes);
+app.use('/api/quotes', quoteRoutes);
 app.use('/api/admin/media', mediaRoutes);
 
 app.use(notFoundHandler);

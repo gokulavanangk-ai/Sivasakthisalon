@@ -5,7 +5,7 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { ok } from '../utils/apiResponse';
 import { ApiError } from '../utils/ApiError';
 import { storeUploadedMedia } from '../services/mediaService';
-import { deleteMedia } from '../services/fileStorage';
+import { deleteMedia, listMediaLibrary } from '../services/fileStorage';
 
 /**
  * POST /api/admin/media/upload
@@ -72,6 +72,16 @@ export const listLocalMediaHandler = asyncHandler(async (_req: Request, res: Res
 });
 
 const SAFE_UPLOAD_NAME = /^(media|upload)-\d+-\d+\.(jpg|jpeg|png|webp|mp4|webm|mov)$/i;
+
+/**
+ * GET /api/admin/media/library
+ * Lists Cloudinary assets already uploaded to the salon folder so the admin can
+ * reuse a previously-uploaded image as the single source for multiple fields.
+ */
+export const listMediaLibraryHandler = asyncHandler(async (_req: Request, res: Response) => {
+  const assets = await listMediaLibrary();
+  ok(res, assets);
+});
 
 /**
  * DELETE /api/admin/media/:publicId

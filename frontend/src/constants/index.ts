@@ -2,51 +2,20 @@ export const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '
 
 import type { BookingStatus, FaceShape, GalleryCategory, HairstyleCategory, HairType, StyleType } from '@/types';
 
-export const GOOGLE_MAPS_URL =
-  (import.meta.env.VITE_GOOGLE_MAPS_URL as string | undefined) ??
-  'https://www.google.com/maps?q=Rosalpatti,+Tamil+Nadu+626001&output=embed';
-
-export const DEFAULT_DIRECTIONS_URL =
-  'https://www.google.com/maps/dir/?api=1&destination=Pandian+Nagar,+Rosalpatti,+Virudhunagar,+Tamil+Nadu+626001';
-
-export const PHONE_DISPLAY = '9790446470';
-export const WHATSAPP_NUMBER = '9790446470';
-export const INSTAGRAM_HANDLE = 'sivasakthisalon';
-
-export function whatsappLink(whatsapp: string = WHATSAPP_NUMBER): string {
+/** Builds a wa.me link from a raw phone number. Returns '' when no number is provided. */
+export function whatsappLink(whatsapp: string): string {
   const digits = whatsapp.replace(/\D/g, '');
+  if (!digits) return '';
   const normalized = digits.startsWith('91') ? digits : `91${digits}`;
   return `https://wa.me/${normalized}`;
 }
 
-export function instagramLink(handle: string = INSTAGRAM_HANDLE): string {
-  const clean = handle.replace(/^@/, '');
+/** Builds an Instagram profile link from a handle. Returns '' when no handle is provided. */
+export function instagramLink(handle: string): string {
+  const clean = handle.replace(/^@/, '').trim();
+  if (!clean) return '';
   return `https://instagram.com/${clean}`;
 }
-
-export const WHATSAPP_LINK = whatsappLink();
-export const INSTAGRAM_LINK = instagramLink();
-
-export const BUSINESS_FALLBACK = {
-  salonName: 'Sivasakthi Men’s Salon',
-  tamilName: 'சிவசக்தி சிகை அலங்காரம்',
-  tamilShortName: 'சிவசக்தி',
-  tagline: 'Every haircut tells a story.',
-  taglineTamil: 'ஒவ்வொரு வெட்டிலும் ஒரு கதை.',
-  experienceYears: 23,
-  happyCustomers: 0,
-  professionalBarbers: 0,
-  phone: '9790446470',
-  whatsapp: '9790446470',
-  email: '',
-  address: 'Pandian Nagar, Rosalpatti, Tamil Nadu 626001',
-  openingHours: 'Mon – Sat: 9:00 AM – 9:00 PM',
-  workingDays: '',
-  instagram: 'sivasakthisalon',
-  facebook: '',
-  youtube: '',
-  googleMapsUrl: 'https://www.google.com/maps?q=Rosalpatti,+Tamil+Nadu+626001',
-} as const;
 
 export const SALON_KEYWORDS = [
   "Men's Salon in Virudhunagar",

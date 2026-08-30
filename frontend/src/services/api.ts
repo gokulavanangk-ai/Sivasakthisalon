@@ -8,9 +8,11 @@ import type {
   Faq,
   GalleryItem,
   Hairstyle,
+  LibraryAsset,
   LocalMediaFile,
   MediaType,
   Paginated,
+  Quote,
   Review,
   SalonSettings,
   Service,
@@ -31,6 +33,10 @@ export const fetchReviews = (opts: { includeInactive?: boolean } = {}) =>
 export const fetchBarbers = () => unwrap<Paginated<Barber>>(publicApi.get('/barbers'));
 export const fetchFaqs = () => unwrap<Faq[]>(publicApi.get('/faqs'));
 export const fetchBusinessHours = () => unwrap<BusinessHours>(publicApi.get('/hours'));
+
+// ---------- Quotes (public) ----------
+export const fetchQuotes = (opts: { source?: string; includeInactive?: boolean } = {}) =>
+  unwrap<Quote[]>(publicApi.get('/quotes', { params: opts }));
 
 // ---------- Availability ----------
 export const fetchAvailableSlots = (date: string) =>
@@ -101,6 +107,7 @@ export const uploadMediaFile = (file: File) => {
   return unwrap<UploadedMedia>(adminApiForm.post('/admin/media/upload', form));
 };
 export const fetchLocalMedia = () => unwrap<LocalMediaFile[]>(adminApi.get('/admin/media/local'));
+export const fetchMediaLibrary = () => unwrap<LibraryAsset[]>(adminApi.get('/admin/media/library'));
 export const deleteMediaFile = (publicId: string, mediaType: MediaType) =>
   unwrap<null>(adminApi.delete(`/admin/media/${encodeURIComponent(publicId)}`, { params: { mediaType } }));
 
@@ -118,6 +125,11 @@ export const deleteBarber = (id: string) => unwrap<null>(adminApi.delete(`/barbe
 export const createFaq = (data: Partial<Faq>) => unwrap<Faq>(adminApi.post('/faqs', data));
 export const updateFaq = (id: string, data: Partial<Faq>) => unwrap<Faq>(adminApi.put(`/faqs/${id}`, data));
 export const deleteFaq = (id: string) => unwrap<null>(adminApi.delete(`/faqs/${id}`));
+
+// ---------- Admin: quotes ----------
+export const createQuote = (data: Partial<Quote>) => unwrap<Quote>(adminApi.post('/quotes', data));
+export const updateQuote = (id: string, data: Partial<Quote>) => unwrap<Quote>(adminApi.put(`/quotes/${id}`, data));
+export const deleteQuote = (id: string) => unwrap<null>(adminApi.delete(`/quotes/${id}`));
 
 // ---------- Admin: salon / hours ----------
 export const updateSalon = (data: Partial<SalonSettings>) => unwrap<SalonSettings>(adminApi.put('/salon', data));

@@ -3,6 +3,7 @@ import { bookingSchema } from '../validators/booking.validator';
 import { loginSchema } from '../validators/auth.validator';
 import { gallerySchema } from '../validators/gallery.validator';
 import { mediaSchema } from '../validators/media.validator';
+import { quoteSchema } from '../validators/quote.validator';
 
 function parseBooking(body: unknown) {
   return bookingSchema.safeParse({ body });
@@ -107,5 +108,61 @@ describe('mediaSchema validation', () => {
   it('accepts image and video types', () => {
     expect(mediaSchema.safeParse({ mediaType: 'image', sourceType: 'local' }).success).toBe(true);
     expect(mediaSchema.safeParse({ mediaType: 'video', sourceType: 'upload' }).success).toBe(true);
+  });
+});
+
+describe('quoteSchema validation', () => {
+  const valid = {
+    text: 'ஒவ்வொரு வெட்டிலும் ஒரு கதை. வந்து உன் கதையை சொல்.',
+    author: 'Sivasakthi',
+    role: 'Founder',
+    source: 'contact',
+    image: { url: 'https://res.cloudinary.com/uen3jw7c/image/upload/v1/sivasakthi-salon/a.jpg', publicId: 'sivasakthi-salon/a.jpg' },
+    isActive: true,
+    sortOrder: 1,
+  };
+
+  it('accepts a valid quote payload', () => {
+    const r = quoteSchema.safeParse({ body: valid });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.body.author).toBe('Sivasakthi');
+      expect(r.data.body.source).toBe('contact');
+    }
+  });
+
+  it('coerces string sortOrder to a number', () => {
+    const r = quoteSchema.safeParse({ body: { text: 'hello world', sortOrder: '3' } });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.body.sortOrder).toBe(3);
+  });
+
+  it('rejects empty text', () => {
+    const r = quoteSchema.safeParse({ body: { ...valid, text: '' } });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects text over 600 chars', () => {
+    const r = quoteSchema.safeParse({ body: { ...valid, text: 'x'.repeat(601) } });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects an invalid source', () => {
+    const r = quoteSchema.safeParse({ body: { ...valid, source: 'not-a-source' } });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects a malformed image URL', () => {
+    const r = quoteSchema.safeParse({ body: { ...valid, image: { url: 'not-a-url' } } });
+    expect(r.success).toBe(false);
+  });
+
+  it('defaults author and source when omitted', () => {
+    const r = quoteSchema.safeParse({ body: { text: 'just a quote' } });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.body.source).toBe('general');
+      expect(r.data.body.author).toBeUndefined();
+    }
   });
 });

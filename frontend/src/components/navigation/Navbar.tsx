@@ -175,15 +175,17 @@ export function Navbar() {
                 >
                   Book Your Style
                 </button>
-                <a
-                  href={waLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-line px-7 py-3.5 font-sans text-[12px] font-semibold uppercase tracking-widest text-cream"
-                >
-                  <Phone className="h-4 w-4" />
-                  WhatsApp {primaryPhone}
-                </a>
+                {waLink && bi.whatsapp && (
+                  <a
+                    href={waLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-line px-7 py-3.5 font-sans text-[12px] font-semibold uppercase tracking-widest text-cream"
+                  >
+                    <Phone className="h-4 w-4" />
+                    WhatsApp {primaryPhone}
+                  </a>
+                )}
               </motion.div>
             </nav>
           </motion.div>

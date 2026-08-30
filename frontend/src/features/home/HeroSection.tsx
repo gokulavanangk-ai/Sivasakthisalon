@@ -20,7 +20,9 @@ export function HeroSection() {
   const bi = businessInfoOf(salon);
   const taglineTamil = bi.taglineTamil;
   const title = hero?.title ?? 'உன் தோற்றம்…\nஉன் அடையாளம்.';
-  const subtitle = hero?.subtitle || `${bi.experienceYears}+ YEARS OF EXPERIENCE`;
+  const hasYears = typeof bi.experienceYears === 'number' && bi.experienceYears > 0;
+  const subtitle =
+    hero?.subtitle || (hasYears ? `${bi.experienceYears}+ YEARS OF EXPERIENCE` : 'YEARS OF EXPERIENCE');
   const ctaPrimary = salon?.sections?.hero?.ctaPrimary ?? 'Book Your Style';
   const ctaSecondary = salon?.sections?.hero?.ctaSecondary ?? 'Explore Our Style';
 

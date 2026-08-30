@@ -8,6 +8,7 @@ import { ComboBuilder } from '@/features/styleFinder/ComboBuilder';
 import { BeforeAfterSection } from '@/features/beforeAfter/BeforeAfter';
 import { GallerySection } from '@/features/home/GallerySection';
 import { ReviewsSection } from '@/features/reviews/ReviewsSection';
+import { QuotesSection } from '@/features/quotes/QuotesSection';
 import { FaqSection } from '@/features/faq/FaqSection';
 import { CtaSection } from '@/features/home/CtaSection';
 import { OffersSection } from '@/features/offers/OffersSection';
@@ -28,7 +29,7 @@ export default function HomePage() {
       'Hair + Beard Combos',
       'Face Cleanup',
       'Head Massage',
-      `${bi.experienceYears}+ Years of Craft`,
+      `${typeof bi.experienceYears === 'number' && bi.experienceYears > 0 ? `${bi.experienceYears}+` : ''} Years of Craft`,
     ],
     [bi.experienceYears],
   );
@@ -48,6 +49,7 @@ export default function HomePage() {
       <BeforeAfterSection />
       <GallerySection />
       <ReviewsSection />
+      <QuotesSection />
       <FaqSection />
       <CtaSection />
     </>

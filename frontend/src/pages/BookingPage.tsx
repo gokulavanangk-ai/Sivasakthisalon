@@ -45,15 +45,23 @@ export default function BookingPage() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-center gap-3 text-muted">
                 <Phone className="h-4 w-4 text-gold" />
-                <a href={`tel:+91${bi.phone}`} className="hover:text-cream">
-                  {formatPhone(bi.phone)}
-                </a>
+                {bi.phone ? (
+                  <a href={`tel:+91${bi.phone}`} className="hover:text-cream">
+                    {formatPhone(bi.phone)}
+                  </a>
+                ) : (
+                  <span className="text-muted/50">—</span>
+                )}
               </li>
               <li className="flex items-center gap-3 text-muted">
                 <MessageCircle className="h-4 w-4 text-gold" />
-                <a href={whatsappLink(bi.whatsapp)} target="_blank" rel="noopener noreferrer" className="hover:text-cream">
-                  WhatsApp
-                </a>
+                {whatsappLink(bi.whatsapp) ? (
+                  <a href={whatsappLink(bi.whatsapp)} target="_blank" rel="noopener noreferrer" className="hover:text-cream">
+                    WhatsApp
+                  </a>
+                ) : (
+                  <span className="text-muted/50">—</span>
+                )}
               </li>
               <li className="flex items-start gap-3 text-muted">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold" />

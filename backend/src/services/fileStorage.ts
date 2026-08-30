@@ -133,3 +133,46 @@ export async function deleteMedia(publicId: string, mediaType: StoredMediaType =
 export async function deleteImage(publicId: string): Promise<void> {
   return deleteMedia(publicId, 'image');
 }
+
+export interface LibraryAsset {
+  url: string;
+  publicId: string;
+  mediaType: StoredMediaType;
+}
+
+/**
+ * Lists previously uploaded media that is eligible for reuse from a shared
+ * media library. Uses Cloudinary when that provider is configured; otherwise
+ * returns an empty list (local uploads are dev-only and not a durable source).
+ * Never throws on missing credentials — the admin just sees an empty library.
+ */
+export async function listMediaLibrary(): Promise<LibraryAsset[]> {
+  if (env.storageProvider !== 'cloudinary') return [];
+  if (!cloudinaryConfigured()) {
+    logger.warn('listMediaLibrary: STORAGE_PROVIDER=cloudinary but Cloudinary credentials are incomplete.');
+    return [];
+  }
+  try {
+    const cloudinary = await import('cloudinary');
+    cloudinary.v2.config({
+      cloud_name: env.cloudinary.cloudName,
+      api_key: env.cloudinary.apiKey,
+      api_secret: env.cloudinary.apiSecret,
+    });
+    const result = await cloudinary.v2.api.resources({
+      type: 'upload',
+      prefix: 'sivasakthi-salon/',
+      resource_type: 'image',
+      max_results: 500,
+    });
+    const assets = (result?.resources ?? []) as Array<{ public_id: string; secure_url?: string; url?: string }>;
+    return assets.map((a) => ({
+      url: a.secure_url ?? a.url ?? '',
+      publicId: a.public_id,
+      mediaType: 'image' as StoredMediaType,
+    }));
+  } catch (err) {
+    logger.warn({ err }, 'listMediaLibrary: Cloudinary resource listing failed');
+    return [];
+  }
+}

@@ -9,12 +9,14 @@ export function Footer() {
   if (!salon) return null;
 
   const bi = businessInfoOf(salon);
-  const years = bi.experienceYears;
+  const years = typeof bi.experienceYears === 'number' && bi.experienceYears > 0 ? bi.experienceYears : null;
   const igLink = instagramLink(bi.instagram);
   const waLink = whatsappLink(bi.whatsapp);
   const exploreTitle = salon.sections?.footer?.exploreTitle ?? 'Explore';
   const contactTitle = salon.sections?.footer?.contactTitle ?? 'Contact';
-  const aboutBody = salon.about?.body || `${bi.tamilName} — ${years}+ years of premium men's grooming.`;
+  const aboutBody = salon.about?.body || (bi.tamilName ? `${bi.tamilName}${years ? ` — ${years}+ years of premium men's grooming` : ''}.` : '');
+  const yearsSuffix = years ? `${years}+ years of trusted grooming` : 'Trusted grooming';
+  const area = bi.address ? bi.address.split(',')[0] : '';
 
   return (
     <footer className="border-t border-line bg-ink-900" id="footer">
@@ -61,12 +63,14 @@ export function Footer() {
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
               <span>{bi.address}</span>
             </li>
-            <li className="flex gap-3 text-muted">
-              <Phone className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
-              <a href={`tel:+91${bi.phone}`} className="hover:text-cream">
-                {formatPhone(bi.phone)}
-              </a>
-            </li>
+            {bi.phone && (
+              <li className="flex gap-3 text-muted">
+                <Phone className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
+                <a href={`tel:+91${bi.phone}`} className="hover:text-cream">
+                  {formatPhone(bi.phone)}
+                </a>
+              </li>
+            )}
             {bi.email && (
               <li className="flex gap-3 text-muted">
                 <Mail className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
@@ -99,19 +103,22 @@ export function Footer() {
                 </a>
               </li>
             )}
-            <li>
-              <a
-                href={waLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-gold hover:text-gold-300"
-              >
-                WhatsApp: {formatPhone(bi.whatsapp)}
-              </a>
-            </li>
+            {waLink && bi.whatsapp && (
+              <li>
+                <a
+                  href={waLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-gold hover:text-gold-300"
+                >
+                  WhatsApp: {formatPhone(bi.whatsapp)}
+                </a>
+              </li>
+            )}
           </ul>
           <p className="mt-5 text-xs text-muted/70">
-            {years}+ years of trusted grooming · {bi.address.split(',')[0]}
+            {yearsSuffix}
+            {area ? ` · ${area}` : ''}
           </p>
         </div>
       </div>

@@ -37,15 +37,17 @@ export default function PublicLayout() {
       <Footer />
 
       <div className="fixed bottom-5 right-5 z-40 flex flex-col gap-3">
-        <a
-          href={whatsappLink(bi.whatsapp)}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Chat on WhatsApp"
-          className="flex h-13 w-13 items-center justify-center rounded-full bg-[#25D366] p-3.5 text-white shadow-lg transition-transform hover:scale-105"
-        >
-          <MessageCircle className="h-6 w-6" />
-        </a>
+        {whatsappLink(bi.whatsapp) && (
+          <a
+            href={whatsappLink(bi.whatsapp)}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Chat on WhatsApp"
+            className="flex h-13 w-13 items-center justify-center rounded-full bg-[#25D366] p-3.5 text-white shadow-lg transition-transform hover:scale-105"
+          >
+            <MessageCircle className="h-6 w-6" />
+          </a>
+        )}
         {salon?.toggles?.bookingEnabled !== false && (
           <a
             href="/booking"

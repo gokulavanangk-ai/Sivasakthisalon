@@ -23,6 +23,7 @@ const AdminStylesPage = lazy(() => import('@/pages/admin/AdminStylesPage'));
 const AdminGalleryPage = lazy(() => import('@/pages/admin/AdminGalleryPage'));
 const AdminReviewsPage = lazy(() => import('@/pages/admin/AdminReviewsPage'));
 const AdminFaqsPage = lazy(() => import('@/pages/admin/AdminFaqsPage'));
+const AdminQuotesPage = lazy(() => import('@/pages/admin/AdminQuotesPage'));
 const AdminSettingsPage = lazy(() => import('@/pages/admin/AdminSettingsPage'));
 const AdminWebsitePage = lazy(() => import('@/pages/admin/AdminWebsitePage'));
 const AdminAboutPage = lazy(() => import('@/pages/admin/AdminAboutPage'));
@@ -79,6 +80,7 @@ export default function App() {
             <Route path="gallery" element={<AdminGalleryPage />} />
             <Route path="reviews" element={<AdminReviewsPage />} />
             <Route path="faqs" element={<AdminFaqsPage />} />
+            <Route path="quotes" element={<AdminQuotesPage />} />
             <Route path="settings" element={<AdminSettingsPage />} />
             <Route path="content" element={<AdminWebsitePage />} />
             <Route path="content/about" element={<AdminAboutPage />} />

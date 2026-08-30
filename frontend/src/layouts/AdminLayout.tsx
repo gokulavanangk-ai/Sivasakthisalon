@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, Navigate, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, CalendarCheck, Scissors, Ruler, Image as ImageIcon, Star, HelpCircle, Settings, KeyRound, LayoutTemplate, Info, Phone, LogOut, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, CalendarCheck, Scissors, Ruler, Image as ImageIcon, Star, HelpCircle, Quote, Settings, KeyRound, LayoutTemplate, Info, Phone, LogOut, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { LoadingSpinner } from '@/components/ui/Feedback';
@@ -16,6 +16,7 @@ const NAV = [
   { to: '/admin/content/contact', label: 'Contact', icon: Phone },
   { to: '/admin/reviews', label: 'Reviews', icon: Star },
   { to: '/admin/faqs', label: 'FAQs', icon: HelpCircle },
+  { to: '/admin/quotes', label: 'Quotes', icon: Quote },
   { to: '/admin/settings', label: 'Settings', icon: Settings },
   { to: '/admin/account', label: 'Account', icon: KeyRound },
 ];

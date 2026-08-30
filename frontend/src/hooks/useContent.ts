@@ -6,6 +6,7 @@ import {
   fetchFaqs,
   fetchGallery,
   fetchHairstyles,
+  fetchQuotes,
   fetchReviews,
   fetchSalon,
   fetchServices,
@@ -17,6 +18,14 @@ export function useSalon() {
 
 export function useFaqs() {
   return useQuery({ queryKey: ['faqs'], queryFn: fetchFaqs, staleTime: 60 * 1000 });
+}
+
+export function useQuotes(opts: { source?: string; includeInactive?: boolean } = {}) {
+  return useQuery({
+    queryKey: ['quotes', opts],
+    queryFn: () => fetchQuotes(opts),
+    staleTime: 60 * 1000,
+  });
 }
 
 export function useServices(opts: { includeInactive?: boolean } = {}) {

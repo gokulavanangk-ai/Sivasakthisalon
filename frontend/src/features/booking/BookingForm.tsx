@@ -154,12 +154,16 @@ export function BookingForm() {
         <p className="font-tamil text-xl text-cream">Online booking is temporarily unavailable.</p>
         <p className="mt-2 text-sm text-muted">Kindly call or WhatsApp us to reserve your slot.</p>
         <div className="mt-6 flex justify-center gap-3">
-          <a href={`tel:+91${bi.phone}`} className="btn-primary">
-            <Phone className="h-4 w-4" /> Call Now
-          </a>
-          <a href={waLink} target="_blank" rel="noopener noreferrer" className="btn-ghost">
-            <MessageCircle className="h-4 w-4" /> WhatsApp Us
-          </a>
+          {bi.phone && (
+            <a href={`tel:+91${bi.phone}`} className="btn-primary">
+              <Phone className="h-4 w-4" /> Call Now
+            </a>
+          )}
+          {waLink && (
+            <a href={waLink} target="_blank" rel="noopener noreferrer" className="btn-ghost">
+              <MessageCircle className="h-4 w-4" /> WhatsApp Us
+            </a>
+          )}
         </div>
       </div>
     );

@@ -333,3 +333,24 @@ export interface Faq {
   sortOrder: number;
   isActive: boolean;
 }
+
+export type QuoteSource = 'home' | 'about' | 'contact' | 'general';
+
+export interface Quote {
+  _id: string;
+  text: string;
+  author: string | null;
+  role: string;
+  source: QuoteSource;
+  image: { url: string; publicId: string } | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface LibraryAsset {
+  url: string;
+  publicId: string;
+  mediaType: MediaType;
+}
