@@ -97,6 +97,38 @@ npm run build
 
 Visit `http://localhost:5173`. Admin dashboard: `http://localhost:5173/admin`.
 
+## Deployment
+
+Production topology (one repo, two platforms):
+
+| Service | Platform | Root directory |
+| ------- | -------- | -------------- |
+| Frontend (SPA) | Vercel | `frontend` |
+| Backend (Express API) | Render | `backend` |
+| Database | MongoDB Atlas | — |
+| Media storage | Cloudinary | — |
+
+**Frontend (Vercel):** Root directory `frontend` (Vercel auto-detects Vite). Set
+`VITE_API_URL` to the Render backend URL, e.g. `https://<your-render-app>.onrender.com/api`.
+If unset the app falls back to same-origin `/api` (local dev / same-domain deployments only).
+
+**Backend (Render):** Root directory `backend`, build `npm run build`, start
+`npm start`, health check `/api/health`. Set all env vars from `.env.example` in the Render dashboard (or use the bundled `render.yaml` blueprint).
+Required: `NODE_ENV=production`, `PORT`, `CLIENT_URL` (must be the exact Vercel
+frontend origin for CORS), `MONGO_URI`, `JWT_SECRET`, `STORAGE_PROVIDER=cloudinary`
+plus `CLOUDINARY_*`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
+
+- The backend listens on `process.env.PORT` (Render injects it) and starts safely
+  even if MongoDB is briefly unreachable — `/api/health` stays up and DB-backed
+  routes return a clean `503 DB_UNAVAILABLE` until the connection recovers.
+- Admin auth uses an HttpOnly cookie. In production it is set
+  `SameSite=None; Secure` so the cookie survives the cross-site boundary between
+  the Vercel frontend and the Render backend.
+- CORS is driven by `CLIENT_URL` (comma-separated for multiple origins) with
+  credentials enabled; the Vercel origin must be listed there.
+- Errors never leak stack traces or secrets in production; details are logged
+  server-side only.
+
 ## Booking flow
 
 1. Customer picks a service → date (14 days ahead) → available time slot → details.

@@ -13,7 +13,7 @@ async function bootstrap(): Promise<void> {
   }
 
   app.listen(env.port, () => {
-    logger.info(`API listening on http://localhost:${env.port}`);
+    logger.info(env.isProduction ? `API listening on port ${env.port}` : `API listening on http://localhost:${env.port}`);
   });
 
   handleExit();

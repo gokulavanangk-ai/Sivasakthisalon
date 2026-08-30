@@ -10,13 +10,21 @@ export const loginHandler = asyncHandler(async (req: Request, res: Response) => 
   const { identifier, password } = req.body;
   const result = await login(identifier, password);
 
-  res.setHeader('Set-Cookie', `token=${result.token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${7 * 24 * 60 * 60}; ${env.isProduction ? 'Secure;' : ''}`);
+  res.setHeader(
+    'Set-Cookie',
+    `token=${result.token}; HttpOnly; ${
+      env.isProduction ? 'SameSite=None; Secure;' : 'SameSite=Lax;'
+    } Path=/; Max-Age=${7 * 24 * 60 * 60}`,
+  );
 
   ok(res, result.admin, 'Login successful');
 });
 
 export const logoutHandler = asyncHandler(async (_req: Request, res: Response) => {
-  res.setHeader('Set-Cookie', `token=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`);
+  res.setHeader(
+    'Set-Cookie',
+    `token=; HttpOnly; ${env.isProduction ? 'SameSite=None; Secure;' : 'SameSite=Lax;'} Path=/; Max-Age=0`,
+  );
   ok(res, null, 'Logged out');
 });
 

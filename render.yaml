@@ -1,0 +1,49 @@
+# Render blueprint for the Sivasakthi Salon backend (Express API).
+# Create the service from this repo with:
+#   - Runtime:    Node
+#   - Root dir:   backend
+#   - Health path: /api/health
+# Secrets (MONGO_URI, JWT_SECRET, CLOUDINARY_*) are marked `sync: false` so
+# they are only set once via the Render dashboard and never overwritten by
+# redeploys. Replace the placeholder values on first deploy.
+services:
+  - type: web
+    name: sivasakthi-salon-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install --omit=dev=false && npm run build
+    startCommand: npm start
+    healthCheck:
+      path: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: CLIENT_URL
+        value: https://sivasakthi-salon.vercel.app
+      - key: MONGO_URI
+        value: mongodb+srv://REPLACE_ME
+        sync: false
+      - key: JWT_SECRET
+        value: REPLACE_WITH_LONG_RANDOM_STRING
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: ADMIN_EMAIL
+        value: admin@sivasakthisalon.in
+        sync: false
+      - key: ADMIN_PASSWORD
+        value: REPLACE_WITH_STRONG_PASSWORD
+        sync: false
+      - key: STORAGE_PROVIDER
+        value: cloudinary
+      - key: CLOUDINARY_CLOUD_NAME
+        value: REPLACE_ME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        value: REPLACE_ME
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        value: REPLACE_ME
+        sync: false
