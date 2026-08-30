@@ -3,6 +3,7 @@ import { useSalon } from '@/hooks/useContent';
 import { useSettingsMutations, useMediaMutations } from '@/features/admin/mutations';
 import { AdminCard, Toggle } from '@/features/admin/ui';
 import { MediaField } from '@/components/shared/MediaField';
+import { ImageUpload } from '@/components/shared/ImageUpload';
 import { SECTIONS, type SectionMeta, type FieldDef, getPath, setPath, buildPayload, emptyOffer } from '@/features/admin/websiteContent';
 import { Pencil, X, Plus, Trash2, Check } from 'lucide-react';
 import type { MediaValue, SalonSettings } from '@/types';
@@ -145,7 +146,7 @@ function SectionEditorModal({
                   />
                 </div>
               ) : (
-                <ContentField key={field.key} field={field} value={getPath(draft as unknown as Record<string, unknown>, field.key)} onChange={(v) => setValue(field.key, v)} />
+                <ContentField key={field.key} field={field} value={getPath(draft as unknown as Record<string, unknown>, field.key)} onChange={(v) => setValue(field.key, v)} onRegisterPendingUpload={(publicId) => pendingUploads.current.add(publicId)} />
               ),
             )}
           </div>
@@ -188,6 +189,7 @@ function SectionEditorModal({
               onChange={setOffer}
               onAdd={() => setDraft((d) => ({ ...d, offers: { ...d.offers, items: [...(d.offers?.items ?? []), { ...emptyOffer(), sortOrder: (d.offers?.items?.length ?? 0) }] } }))}
               onRemove={(i) => setDraft((d) => ({ ...d, offers: { ...d.offers, items: (d.offers?.items ?? []).filter((_, idx) => idx !== i) } }))}
+              onRegisterPendingUpload={(publicId) => pendingUploads.current.add(publicId)}
             />
           )}
         </div>
@@ -220,19 +222,27 @@ function ContentField({
   field,
   value,
   onChange,
+  onRegisterPendingUpload,
 }: {
   field: FieldDef;
   value: unknown;
   onChange: (value: unknown) => void;
+  onRegisterPendingUpload?: (publicId: string) => void;
 }) {
   const textValue = typeof value === 'string' ? value : '';
   const numValue = typeof value === 'number' ? value : '';
-  const isUrl = field.type === 'url';
 
   return (
     <label className={field.full ? 'col-span-2 block' : 'block'}>
       <span className="mb-1.5 block text-xs font-medium text-zinc-400">{field.label}</span>
-      {field.type === 'textarea' ? (
+      {field.isImage ? (
+        <ImageUpload
+          value={textValue}
+          onChange={onChange}
+          onRegisterPendingUpload={onRegisterPendingUpload}
+          aspect="aspect-[4/5]"
+        />
+      ) : field.type === 'textarea' ? (
         <textarea
           className="input-dark min-h-[80px]"
           value={textValue}
@@ -249,22 +259,12 @@ function ContentField({
         />
       ) : (
         <input
-          type={isUrl ? 'url' : 'text'}
+          type="text"
           className="input-dark"
           value={textValue}
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder}
         />
-      )}
-      {field.isImage && textValue && (
-        <div className="mt-2">
-          <img
-            src={textValue}
-            alt="Preview"
-            className="h-20 w-20 rounded-md border border-white/10 object-cover"
-            onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
-          />
-        </div>
       )}
       {field.note && <span className="mt-1 block text-[11px] text-zinc-600">{field.note}</span>}
     </label>
@@ -276,11 +276,13 @@ function OffersEditor({
   onChange,
   onAdd,
   onRemove,
+  onRegisterPendingUpload,
 }: {
   offers: SalonSettings['offers'];
   onChange: (index: number, patch: Partial<SalonSettings['offers']['items'][number]>) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
+  onRegisterPendingUpload?: (publicId: string) => void;
 }) {
   return (
     <div className="col-span-2 rounded-md border border-white/10 p-4">
@@ -324,16 +326,16 @@ function OffersEditor({
                 <input className="input-dark col-span-2" placeholder="Description" value={item.description} onChange={(e) => onChange(i, { description: e.target.value })} />
                 <input type="number" className="input-dark" placeholder="Price (₹)" value={item.price ?? ''} onChange={(e) => onChange(i, { price: e.target.value === '' ? null : Number(e.target.value) })} />
                 <input type="number" className="input-dark" placeholder="Original price (₹)" value={item.originalPrice ?? ''} onChange={(e) => onChange(i, { originalPrice: e.target.value === '' ? null : Number(e.target.value) })} />
-                <input className="input-dark col-span-2" placeholder="Image URL (optional)" value={item.imageUrl} onChange={(e) => onChange(i, { imageUrl: e.target.value })} />
               </div>
-              {item.imageUrl && (
-                <img
-                  src={item.imageUrl}
-                  alt="Offer preview"
-                  className="mt-2 h-16 w-16 rounded-md border border-white/10 object-cover"
-                  onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
+              <div className="mt-2 col-span-2">
+                <ImageUpload
+                  label="Image (optional)"
+                  value={item.imageUrl}
+                  onChange={(url) => onChange(i, { imageUrl: url })}
+                  onRegisterPendingUpload={onRegisterPendingUpload}
+                  aspect="aspect-[4/3]"
                 />
-              )}
+              </div>
             </div>
           ))}
         </div>

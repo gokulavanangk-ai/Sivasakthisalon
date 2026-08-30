@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll, afterAll } from 'vitest';
+import { describe, expect, it, beforeAll, afterAll, vi } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -15,6 +15,8 @@ import {
   sanitizePersistedUrl,
 } from '../services/mediaService';
 import { detectImageFormat, isUnsafeHost } from '../middleware/upload';
+import * as mediaServiceNS from '../services/mediaService';
+import * as fileStorageNS from '../services/fileStorage';
 import { ApiError } from '../utils/ApiError';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sivasakthi-media-test-'));
@@ -160,6 +162,68 @@ describe('file size validation', () => {
   it('rejects a real but oversized video', async () => {
     const f = fakeFile(g.__t_jpg, 'video/mp4', 51 * 1024 * 1024);
     await expect(resolveMediaValue({ file: f })).rejects.toThrow(ApiError);
+  });
+});
+
+describe('REGRESSION: a local file upload must NEVER enter URL validation', () => {
+  it('sends a device File straight to storage as sourceType=upload, never calling validateWebUrl/sanitizePersistedUrl', async () => {
+    const pngPath = writeFile(`reg-${Date.now()}-${Math.random()}.png`, pngBytes());
+    const storeSpy = vi
+      .spyOn(fileStorageNS, 'storeMedia')
+      .mockResolvedValue({
+        mediaType: 'image',
+        url: 'https://res.cloudinary.com/uen3jw7c/image/upload/v1/sivasakthi-salon/media-1.jpg',
+        publicId: 'sivasakthi-salon/media-1.jpg',
+        width: 1600,
+        height: 1200,
+        format: 'jpg',
+        resourceType: 'image',
+      });
+    const validateSpy = vi.spyOn(mediaServiceNS, 'validateWebUrl');
+    const sanitizeSpy = vi.spyOn(mediaServiceNS, 'sanitizePersistedUrl');
+    try {
+      const f = fakeFile(pngPath, 'image/png', fs.statSync(pngPath).size, 'local-upload.png');
+      const value = await resolveMediaValue({ file: f });
+
+      // A device-uploaded File becomes a durable https upload reference — it is
+      // NOT turned into a blob:, file://, data:, localhost or filesystem path.
+      expect(value.sourceType).toBe('upload');
+      expect(value.publicId).toBe('sivasakthi-salon/media-1.jpg');
+      expect(value.url).toMatch(/^https:\/\//);
+      expect(value.url).not.toMatch(/^(blob:|file:|data:)/);
+      expect(value.url).not.toContain('localhost');
+      expect(value.url).not.toContain('127.0.0.1');
+      expect(value.url).not.toContain('/uploads/');
+
+      // The upload branch must never touch URL validation (the source of the
+      // "local or private network" error) because a real File is never a URL string.
+      expect(validateSpy).not.toHaveBeenCalled();
+      expect(sanitizeSpy).not.toHaveBeenCalled();
+    } finally {
+      storeSpy.mockRestore();
+      validateSpy.mockRestore();
+      sanitizeSpy.mockRestore();
+    }
+  });
+
+  it('only URL-typed input ever reaches validateWebUrl — a device upload short-circuits before any URL check', async () => {
+    const jpgPath = writeFile(`reg-${Date.now()}-${Math.random()}.jpg`, jpegBytes());
+    const storeSpy = vi
+      .spyOn(fileStorageNS, 'storeMedia')
+      .mockResolvedValue({
+        mediaType: 'image',
+        url: 'https://res.cloudinary.com/uen3jw7c/image/upload/v1/x.jpg',
+        publicId: 'x.jpg',
+      });
+    const validateSpy = vi.spyOn(mediaServiceNS, 'validateWebUrl');
+    try {
+      const f = fakeFile(jpgPath, 'image/jpeg', fs.statSync(jpgPath).size, 'photo.jpg');
+      await expect(resolveMediaValue({ file: f })).resolves.toMatchObject({ sourceType: 'upload' });
+      expect(validateSpy).not.toHaveBeenCalled();
+    } finally {
+      storeSpy.mockRestore();
+      validateSpy.mockRestore();
+    }
   });
 });
 

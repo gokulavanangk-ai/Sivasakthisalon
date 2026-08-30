@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuotes } from '@/hooks/useContent';
-import { useQuoteMutations } from '@/features/admin/mutations';
+import { useQuoteMutations, useMediaMutations } from '@/features/admin/mutations';
 import { AdminCard, Toggle } from '@/features/admin/ui';
-import { MediaLibraryPicker, type PickedImage } from '@/features/admin/MediaLibraryPicker';
-import { Pencil, Trash2, Plus, X, ImageIcon } from 'lucide-react';
-import type { Quote, QuoteSource } from '@/types';
+import { MediaField } from '@/components/shared/MediaField';
+import { Pencil, Trash2, Plus, X } from 'lucide-react';
+import type { MediaValue, Quote, QuoteSource } from '@/types';
 
 const SOURCE_OPTIONS: { value: QuoteSource; label: string }[] = [
   { value: 'general', label: 'General' },
@@ -26,8 +26,9 @@ const emptyForm = (): Partial<Quote> => ({
 export default function AdminQuotesPage() {
   const { data, isLoading } = useQuotes({ includeInactive: true });
   const mut = useQuoteMutations();
+  const { removeFile } = useMediaMutations();
   const [form, setForm] = useState<Partial<Quote> | null>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const pendingUploads = useRef<Set<string>>(new Set());
 
   const save = () => {
     if (!form) return;
@@ -39,9 +40,20 @@ export default function AdminQuotesPage() {
     }
   };
 
-  const pickImage = (image: PickedImage) => {
-    setForm((f) => (f ? { ...f, image: { url: image.url, publicId: image.publicId } } : f));
-    setPickerOpen(false);
+  const pickImage = (media: MediaValue | null) => {
+    if (media) {
+      setForm((f) => (f ? { ...f, image: { url: media.url, publicId: media.publicId ?? '' } } : f));
+    } else {
+      setForm((f) => (f ? { ...f, image: null } : f));
+    }
+  };
+
+  const clearPendingUploads = () => {
+    if (pendingUploads.current.size > 0) {
+      pendingUploads.current.forEach((publicId) => removeFile.mutate({ publicId, mediaType: 'image' }));
+    }
+    pendingUploads.current.clear();
+    setForm(null);
   };
 
   return (
@@ -123,11 +135,11 @@ export default function AdminQuotesPage() {
       )}
 
       {form && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-16" onClick={() => setForm(null)}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-16" onClick={clearPendingUploads}>
           <div className="w-full max-w-xl rounded-md border border-white/10 bg-[#141414] p-6" onClick={(e) => e.stopPropagation()}>
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">{form._id ? 'Edit quote' : 'New quote'}</h2>
-              <button type="button" onClick={() => setForm(null)} className="rounded-md p-1 text-zinc-400 hover:text-white" aria-label="Close">
+              <button type="button" onClick={clearPendingUploads} className="rounded-md p-1 text-zinc-400 hover:text-white" aria-label="Close">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -162,33 +174,21 @@ export default function AdminQuotesPage() {
                 </Field>
               </div>
               <div className="rounded-md border border-white/10 p-3">
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="text-sm text-cream/85">Image (optional)</span>
-                  <button
-                    type="button"
-                    onClick={() => setPickerOpen(true)}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20"
-                  >
-                    <ImageIcon className="h-3.5 w-3.5" /> Choose / upload
-                  </button>
-                </div>
-                {form.image?.url ? (
-                  <div className="flex items-center gap-3">
-                    <img src={form.image.url} alt="Quote" className="h-16 w-16 rounded-md object-cover" />
-                    <button type="button" onClick={() => setForm({ ...form, image: null })} className="text-xs text-red-400 hover:text-red-300">
-                      Remove image
-                    </button>
-                  </div>
-                ) : (
-                  <p className="text-xs text-zinc-500">No image set.</p>
-                )}
+                <MediaField
+                  label="Image (optional)"
+                  mediaType="image"
+                  value={form.image?.url ? { mediaType: 'image', sourceType: 'upload', url: form.image.url, publicId: form.image.publicId } : null}
+                  onChange={pickImage}
+                  onRegisterPendingUpload={(publicId) => pendingUploads.current.add(publicId)}
+                  aspect="aspect-[4/5]"
+                />
               </div>
               <div className="rounded-md border border-white/10 p-3">
                 <Toggle label="Active" checked={Boolean(form.isActive)} onChange={(v) => setForm({ ...form, isActive: v })} />
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-2">
-              <button type="button" onClick={() => setForm(null)} className="rounded-md px-4 py-2 text-sm text-zinc-400 hover:text-white">
+              <button type="button" onClick={clearPendingUploads} className="rounded-md px-4 py-2 text-sm text-zinc-400 hover:text-white">
                 Cancel
               </button>
               <button
@@ -203,8 +203,6 @@ export default function AdminQuotesPage() {
           </div>
         </div>
       )}
-
-      {pickerOpen && <MediaLibraryPicker onSelect={pickImage} onClose={() => setPickerOpen(false)} />}
     </div>
   );
 }

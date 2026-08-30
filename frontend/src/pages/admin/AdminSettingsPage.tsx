@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSalon, useBusinessHours, useBarbers } from '@/hooks/useContent';
 import { useSettingsMutations, useBarberMutations } from '@/features/admin/mutations';
 import { AdminCard, Toggle } from '@/features/admin/ui';
+import { ImageUpload } from '@/components/shared/ImageUpload';
 import { Trash2, Plus, Upload, X } from 'lucide-react';
 import type { SalonSettings, BusinessHours, WeekDay, DayHours, Barber } from '@/types';
 
@@ -23,6 +24,7 @@ export default function AdminSettingsPage() {
   const { data: barbersData } = useBarbers();
   const mut = useSettingsMutations();
   const barberMut = useBarberMutations();
+  const pendingUploads = useRef<Set<string>>(new Set());
 
   const [settings, setSettings] = useState<Partial<SalonSettings>>({});
   const [businessHours, setBusinessHours] = useState<Partial<BusinessHours>>({});
@@ -60,6 +62,7 @@ export default function AdminSettingsPage() {
   const saveSettings = () => {
     if (salon?._id && settings) mut.save.mutate({ ...settings, _id: undefined } as Partial<SalonSettings>);
     if (businessHours.slotDurationMinutes) mut.hours.mutate(businessHours as Partial<BusinessHours>);
+    pendingUploads.current.clear();
   };
 
   const saveBarber = () => {
@@ -177,11 +180,35 @@ export default function AdminSettingsPage() {
             </Field>
             <Field label="Hero tagline (Tamil)"><input className="input-dark col-span-2" value={settings.hero?.tagline ?? ''} onChange={(e) => setSettings((s) => ({ ...s, hero: { ...s.hero!, tagline: e.target.value } }))} /></Field>
             <Field label="Hero video URL"><input className="input-dark" value={settings.hero?.videoUrl ?? ''} onChange={(e) => setSettings((s) => ({ ...s, hero: { ...s.hero!, videoUrl: e.target.value } }))} /></Field>
-            <Field label="Hero poster URL"><input className="input-dark" value={settings.hero?.posterUrl ?? ''} onChange={(e) => setSettings((s) => ({ ...s, hero: { ...s.hero!, posterUrl: e.target.value } }))} /></Field>
-            <Field label="Mobile fallback image URL"><input className="input-dark col-span-2" value={settings.hero?.mobileImageUrl ?? ''} onChange={(e) => setSettings((s) => ({ ...s, hero: { ...s.hero!, mobileImageUrl: e.target.value } }))} /></Field>
+            <div className="col-span-2">
+              <ImageUpload
+                label="Hero poster image"
+                value={settings.hero?.posterUrl ?? ''}
+                onChange={(url) => setSettings((s) => ({ ...s, hero: { ...s.hero!, posterUrl: url } }))}
+                onRegisterPendingUpload={(publicId) => pendingUploads.current.add(publicId)}
+                aspect="aspect-[16/9]"
+              />
+            </div>
+            <div className="col-span-2">
+              <ImageUpload
+                label="Mobile fallback image"
+                value={settings.hero?.mobileImageUrl ?? ''}
+                onChange={(url) => setSettings((s) => ({ ...s, hero: { ...s.hero!, mobileImageUrl: url } }))}
+                onRegisterPendingUpload={(publicId) => pendingUploads.current.add(publicId)}
+                aspect="aspect-[4/5]"
+              />
+            </div>
             <Field label="About heading (Tamil)"><input className="input-dark col-span-2" value={settings.about?.heading ?? ''} onChange={(e) => setSettings((s) => ({ ...s, about: { ...s.about!, heading: e.target.value } }))} /></Field>
             <Field label="About body (Tamil)"><textarea className="input-dark col-span-2 min-h-[80px]" value={settings.about?.body ?? ''} onChange={(e) => setSettings((s) => ({ ...s, about: { ...s.about!, body: e.target.value } }))} /></Field>
-            <Field label="About image URL"><input className="input-dark col-span-2" value={settings.about?.imageUrl ?? ''} onChange={(e) => setSettings((s) => ({ ...s, about: { ...s.about!, imageUrl: e.target.value } }))} /></Field>
+            <div className="col-span-2">
+              <ImageUpload
+                label="About image"
+                value={settings.about?.imageUrl ?? ''}
+                onChange={(url) => setSettings((s) => ({ ...s, about: { ...s.about!, imageUrl: url } }))}
+                onRegisterPendingUpload={(publicId) => pendingUploads.current.add(publicId)}
+                aspect="aspect-[4/5]"
+              />
+            </div>
           </div>
         </AdminCard>
       </div>

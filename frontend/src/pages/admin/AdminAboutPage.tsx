@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSalon } from '@/hooks/useContent';
 import { useSettingsMutations } from '@/features/admin/mutations';
 import { AdminCard } from '@/features/admin/ui';
+import { ImageUpload } from '@/components/shared/ImageUpload';
 import { Save } from 'lucide-react';
 import type { SalonSettings } from '@/types';
 
@@ -117,14 +118,14 @@ export default function AdminAboutPage() {
             <Field label="Story note (Tamil)" full>
               <textarea className="input-dark min-h-[70px]" value={form.sections?.about?.storyNote ?? ''} onChange={(e) => setSection('storyNote', e.target.value)} />
             </Field>
-            <Field label="Image URL" full>
-              <input className="input-dark" value={form.about?.imageUrl ?? ''} onChange={(e) => setAbout('imageUrl', e.target.value)} placeholder="https://…" />
-            </Field>
-            {form.about?.imageUrl && (
-              <div className="col-span-2">
-                <img src={form.about.imageUrl} alt="About preview" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} className="aspect-[4/5] w-full max-w-[220px] rounded-md object-cover" />
-              </div>
-            )}
+            <div className="col-span-2">
+              <ImageUpload
+                label="Image (upload from device)"
+                value={form.about?.imageUrl ?? ''}
+                onChange={(url) => setAbout('imageUrl', url)}
+                aspect="aspect-[4/5]"
+              />
+            </div>
             <Field label="Years badge label">
               <input className="input-dark" value={form.sections?.about?.yearsLabel ?? ''} onChange={(e) => setSection('yearsLabel', e.target.value)} />
             </Field>
