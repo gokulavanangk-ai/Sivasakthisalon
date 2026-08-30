@@ -33,9 +33,46 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
+function normalizeOrigin(origin: string): string {
+  return origin.trim().replace(/\/+$/, '').toLowerCase();
+}
+
+// Allowed browser origins come from CLIENT_URL (comma-separated).
+const configuredOrigins = env.clientUrl.split(',').map(normalizeOrigin).filter(Boolean);
+
+// If CLIENT_URL was left at the dev default (http://localhost:5173) in a
+// production deploy, strict CORS would block the real frontend with a
+// confusing "No Access-Control-Allow-Origin" error. Fall back to allowing
+// *.vercel.app origins (the documented platform pairing) so the site works
+// out of the box; the moment an explicit CLIENT_URL is configured the lenient
+// fallback is disabled and only the exact origins are allowed.
+const isClientUrlConfigured =
+  configuredOrigins.length > 0 &&
+  !(configuredOrigins.length === 1 && configuredOrigins[0] === 'http://localhost:5173');
+const autoAllowVercelApp = env.isProduction && !isClientUrlConfigured;
+const loggedOrigins = new Set<string>();
+
 app.use(
   cors({
-    origin: env.clientUrl.split(',').map((s) => s.trim()),
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      if (!origin) return callback(null, true);
+      if (configuredOrigins.includes(origin)) return callback(null, true);
+      if (autoAllowVercelApp && origin.endsWith('.vercel.app')) {
+        if (!loggedOrigins.has(origin)) {
+          loggedOrigins.add(origin);
+          logger.warn(
+            { origin },
+            'CORS fallback: allowed *.vercel.app origin. Set CLIENT_URL on Render to the exact frontend origin to enable strict CORS.',
+          );
+        }
+        return callback(null, true);
+      }
+      if (!loggedOrigins.has(origin)) {
+        loggedOrigins.add(origin);
+        logger.warn({ origin, configuredOrigins }, 'CORS: request origin is not allowed');
+      }
+      return callback(null, false);
+    },
     credentials: true,
   }),
 );

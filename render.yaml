@@ -21,7 +21,7 @@ services:
       - key: PORT
         value: 5000
       - key: CLIENT_URL
-        value: https://sivasakthi-salon.vercel.app
+        value: https://sivasakthisalon.vercel.app
       - key: MONGO_URI
         value: mongodb+srv://REPLACE_ME
         sync: false
