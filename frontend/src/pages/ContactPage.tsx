@@ -4,6 +4,7 @@ import { SectionHeading } from '@/components/shared/SectionHeading';
 import { Reveal } from '@/components/shared/Reveal';
 import { whatsappLink, instagramLink } from '@/constants';
 import { formatPhone, businessInfoOf } from '@/lib/utils';
+import { FaqSection } from '@/features/faq/FaqSection';
 
 const WEEK_LABELS: Record<string, string> = {
   monday: 'Monday',
@@ -133,7 +134,8 @@ export default function ContactPage() {
           </div>
         </Reveal>
       </div>
-
+      <FaqSection />
+      
       <div className="container-x mt-14 grid gap-6 lg:grid-cols-2">
         <Reveal>
           <div className="card h-full p-7">
