@@ -2,9 +2,7 @@ import { HeroSection } from '@/features/home/HeroSection';
 import { StorySection } from '@/features/home/StorySection';
 import { ServicesSection } from '@/features/home/ServicesSection';
 import { SignatureSection } from '@/features/home/SignatureSection';
-import { StylesShowcase } from '@/features/home/StylesShowcase';
 import { StyleFinder } from '@/features/styleFinder/StyleFinder';
-import { ComboBuilder } from '@/features/styleFinder/ComboBuilder';
 import { BeforeAfterSection } from '@/features/beforeAfter/BeforeAfter';
 import { GallerySection } from '@/features/home/GallerySection';
 import { ReviewsSection } from '@/features/reviews/ReviewsSection';
@@ -42,9 +40,7 @@ export default function HomePage() {
       <TeamSection />
       <SignatureSection />
       <ServicesSection />
-      <StylesShowcase />
       <StyleFinder />
-      <ComboBuilder />
       <OffersSection />
       <BeforeAfterSection />
       <GallerySection />
