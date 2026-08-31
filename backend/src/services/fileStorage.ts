@@ -148,7 +148,7 @@ function normalizeCloudinaryError(err: unknown): Error {
   return error;
 }
 
-function cloudinaryConfigured(): boolean {
+export function cloudinaryConfigured(): boolean {
   return Boolean(
     env.cloudinary.cloudName && env.cloudinary.apiKey && env.cloudinary.apiSecret,
   );

@@ -5,8 +5,12 @@ import { useMediaMutations } from '@/features/admin/mutations';
 import { MediaPreview } from '@/components/shared/MediaPreview';
 import type { MediaType, MediaValue, UploadedMedia } from '@/types';
 
-export const MEDIA_IMAGE_LIMIT = 5 * 1024 * 1024;
+// Must stay in sync with the backend's MAX_IMAGE_UPLOAD_MB (10MB default,
+// enforced by multer). Set VITE_MAX_IMAGE_UPLOAD_MB if the backend limit changes.
+const MAX_IMAGE_UPLOAD_MB = Number.parseFloat(import.meta.env.VITE_MAX_IMAGE_UPLOAD_MB ?? '10') || 10;
+export const MEDIA_IMAGE_LIMIT = MAX_IMAGE_UPLOAD_MB * 1024 * 1024;
 export const MEDIA_VIDEO_LIMIT = 50 * 1024 * 1024;
+export const MAX_IMAGE_UPLOAD_MB_LABEL = MAX_IMAGE_UPLOAD_MB;
 
 export const IMAGE_ACCEPT = '.jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif';
 export const VIDEO_ACCEPT = '.mp4,.webm,.mov,video/mp4,video/webm,video/quicktime';
@@ -68,7 +72,7 @@ export function MediaField({
     if (mediaType === 'image' && !isImage) return 'Only image files are allowed here (JPG, PNG, WEBP, HEIC).';
     if (mediaType === 'video' && !isVideo) return 'Only video files are allowed here (MP4, WEBM, MOV).';
     if (!isImage && !isVideo) return 'Unsupported file type. Use JPG, PNG, WEBP, HEIC, MP4, WEBM or MOV.';
-    if (isImage && f.size > MEDIA_IMAGE_LIMIT) return 'Image must be 5 MB or smaller.';
+    if (isImage && f.size > MEDIA_IMAGE_LIMIT) return `Image must be ${MAX_IMAGE_UPLOAD_MB_LABEL} MB or smaller.`;
     if (isVideo && f.size > MEDIA_VIDEO_LIMIT) return 'Video must be 50 MB or smaller.';
     return null;
   };
@@ -131,7 +135,7 @@ export function MediaField({
             {uploading ? 'Uploading…' : 'Choose file'}
           </span>
           <span className="text-xs text-zinc-600">
-            {mediaType === 'image' ? 'JPG · PNG · WEBP · HEIC · max 5 MB' : mediaType === 'video' ? 'MP4 · WEBM · MOV · max 50 MB' : 'Image max 5 MB · Video max 50 MB'}
+            {mediaType === 'image' ? `JPG · PNG · WEBP · HEIC · max ${MAX_IMAGE_UPLOAD_MB_LABEL} MB` : mediaType === 'video' ? 'MP4 · WEBM · MOV · max 50 MB' : `Image max ${MAX_IMAGE_UPLOAD_MB_LABEL} MB · Video max 50 MB`}
           </span>
           <input ref={fileRef} type="file" accept={accept} hidden onChange={(e) => void handleFile(e.target.files?.[0] ?? null)} />
         </label>
