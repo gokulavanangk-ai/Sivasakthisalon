@@ -4,10 +4,10 @@ import { ServicesSection } from '@/features/home/ServicesSection';
 import { SignatureSection } from '@/features/home/SignatureSection';
 import { StyleFinder } from '@/features/styleFinder/StyleFinder';
 import { BeforeAfterSection } from '@/features/beforeAfter/BeforeAfter';
-import { GallerySection } from '@/features/home/GallerySection';
+// import { GallerySection } from '@/features/home/GallerySection';
 import { ReviewsSection } from '@/features/reviews/ReviewsSection';
 import { QuotesSection } from '@/features/quotes/QuotesSection';
-import { FaqSection } from '@/features/faq/FaqSection';
+// import { FaqSection } from '@/features/faq/FaqSection';
 import { CtaSection } from '@/features/home/CtaSection';
 import { OffersSection } from '@/features/offers/OffersSection';
 import { TeamSection } from '@/features/team/TeamSection';
@@ -38,15 +38,15 @@ export default function HomePage() {
       <Marquee items={marqueeItems} />
       <StorySection />
       <TeamSection />
+      <OffersSection />
       <SignatureSection />
       <ServicesSection />
       <StyleFinder />
-      <OffersSection />
-      <BeforeAfterSection />
-      <GallerySection />
       <ReviewsSection />
+      <BeforeAfterSection />
+      {/* <GallerySection /> */}
       <QuotesSection />
-      <FaqSection />
+      {/* <FaqSection /> */}
       <CtaSection />
     </>
   );
