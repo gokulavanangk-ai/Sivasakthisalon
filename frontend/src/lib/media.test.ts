@@ -60,6 +60,7 @@ describe('resolveHeroMedia', () => {
     } as never);
     expect(r.videoUrl).toBe('https://example.com/new.mp4');
     expect(r.poster).toBe('https://example.com/poster.webp');
+    expect(r.mobileImageUrl).toBe('');
   });
 
   it('falls back to legacy videoUrl when the media subdoc has no url', () => {
@@ -79,6 +80,7 @@ describe('resolveHeroMedia', () => {
     } as never);
     expect(r.videoUrl).toBe('https://example.com/legacy.mp4');
     expect(r.imageUrl).toBe('https://example.com/mobile.webp');
+    expect(r.mobileImageUrl).toBe('https://example.com/mobile.webp');
   });
 
   it('uses the structured image when it is set', () => {
@@ -91,7 +93,12 @@ describe('resolveHeroMedia', () => {
   });
 
   it('returns empty strings when nothing is configured', () => {
-    expect(resolveHeroMedia(undefined)).toEqual({ videoUrl: '', imageUrl: '', poster: '' });
+    expect(resolveHeroMedia(undefined)).toEqual({
+      videoUrl: '',
+      imageUrl: '',
+      poster: '',
+      mobileImageUrl: '',
+    });
   });
 });
 

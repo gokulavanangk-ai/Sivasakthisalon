@@ -259,6 +259,15 @@ function SectionEditorModal({
                   }}
                   onRegisterPendingUpload={(publicId) => pendingUploads.current.add(publicId)}
                 />
+                <div className="mt-4 rounded-md border border-white/10 p-3">
+                  <ImageUpload
+                    label="Mobile hero image (shown on phones instead of the video)"
+                    value={getPath(draftRecord, 'hero.mobileImageUrl') as string | undefined}
+                    onChange={(url) => setValue('hero.mobileImageUrl', url)}
+                    onRegisterPendingUpload={(publicId) => pendingUploads.current.add(publicId)}
+                    aspect="aspect-[4/5]"
+                  />
+                </div>
               </section>
             )}
 

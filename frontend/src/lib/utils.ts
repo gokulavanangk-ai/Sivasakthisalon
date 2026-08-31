@@ -137,6 +137,8 @@ export interface HeroMediaResolved {
   videoUrl: string;
   imageUrl: string;
   poster: string;
+  /** Static image shown on small screens (below md) instead of the video. */
+  mobileImageUrl: string;
 }
 
 /**
@@ -144,6 +146,9 @@ export interface HeroMediaResolved {
  * but falls back to the legacy `videoUrl`/`posterUrl`/`mobileImageUrl` fields
  * whenever no structured media URL is configured — this keeps old hero videos
  * working even after a default `media.mediaType: "image"` subdoc exists.
+ *
+ * `mobileImageUrl` is always sourced from `hero.mobileImageUrl` (the dedicated
+ * phone fallback). When it is empty, callers fall back to imageUrl/poster.
  */
 export function resolveHeroMedia(hero?: SalonSettings['hero']): HeroMediaResolved {
   const m = hero?.media;
@@ -151,21 +156,22 @@ export function resolveHeroMedia(hero?: SalonSettings['hero']): HeroMediaResolve
   let videoUrl = '';
   let imageUrl = '';
   let poster = '';
+  let mobileImageUrl = hero?.mobileImageUrl ?? '';
 
   if (m?.mediaType === 'video') {
     videoUrl = m.url;
-    imageUrl = m.posterUrl || hero?.posterUrl || hero?.mobileImageUrl || '';
+    imageUrl = m.posterUrl || hero?.posterUrl || mobileImageUrl || '';
     poster = m.posterUrl || hero?.posterUrl || '';
   } else if (m?.mediaType === 'image' && hasStructured) {
     imageUrl = m.url;
     poster = m.posterUrl || hero?.posterUrl || '';
   } else if (!hasStructured) {
     videoUrl = hero?.videoUrl ?? '';
-    imageUrl = hero?.posterUrl || hero?.mobileImageUrl || '';
+    imageUrl = hero?.posterUrl || mobileImageUrl || '';
     poster = hero?.posterUrl || '';
   }
 
-  return { videoUrl, imageUrl, poster };
+  return { videoUrl, imageUrl, poster, mobileImageUrl };
 }
 
 export function formatPhone(phone?: string | null): string {

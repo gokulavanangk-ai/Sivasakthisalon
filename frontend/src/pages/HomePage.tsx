@@ -37,11 +37,11 @@ export default function HomePage() {
       <HeroSection />
       <Marquee items={marqueeItems} />
       <StorySection />
-      <TeamSection />
-      <OffersSection />
       <SignatureSection />
+      <OffersSection />
       <ServicesSection />
       <StyleFinder />
+      <TeamSection />
       <ReviewsSection />
       <BeforeAfterSection />
       {/* <GallerySection /> */}

@@ -70,10 +70,6 @@ export const SECTIONS: SectionMeta[] = [
     fields: [
       { key: 'hero.title', label: 'Hero title (Tamil, line breaks allowed)', type: 'textarea', full: true },
       { key: 'hero.subtitle', label: 'Hero subtitle (eyebrow)', type: 'text', full: true, placeholder: 'e.g. 23+ YEARS OF EXPERIENCE' },
-      { key: 'hero.tagline', label: 'Hero tagline (Tamil)', type: 'text', full: true },
-      { key: 'hero.videoUrl', label: 'Background video URL', type: 'url' },
-      { key: 'hero.posterUrl', label: 'Poster image', type: 'text', isImage: true },
-      { key: 'hero.mobileImageUrl', label: 'Mobile fallback image', type: 'text', isImage: true },
       { key: 'sections.hero.ctaPrimary', label: 'Primary button label', type: 'text' },
       { key: 'sections.hero.ctaSecondary', label: 'Secondary button label', type: 'text' },
       { key: 'toggles.heroVideoEnabled', label: 'Play background video', type: 'boolean' },

@@ -26,7 +26,7 @@ export function HeroSection() {
   const ctaPrimary = salon?.sections?.hero?.ctaPrimary ?? 'Book Your Style';
   const ctaSecondary = salon?.sections?.hero?.ctaSecondary ?? 'Explore Our Style';
 
-  const { videoUrl, imageUrl, poster } = resolveHeroMedia(hero);
+  const { videoUrl, imageUrl, poster, mobileImageUrl } = resolveHeroMedia(hero);
 
   const showVideo =
     salon?.toggles?.heroVideoEnabled !== false &&
@@ -34,6 +34,19 @@ export function HeroSection() {
     !videoFailed;
 
   const backgroundImage = imageUrl;
+  // Mobile always shows a static image (never the <video>). Fall back to the
+  // desktop image/poster when no dedicated mobile image is configured.
+  const mobileImage = mobileImageUrl || imageUrl || poster;
+
+  const gradientBackground = (
+    <div
+      className="h-full w-full animate-slow-zoom"
+      style={{
+        background:
+          'radial-gradient(120% 90% at 70% 10%, #1c1a14 0%, #0d0d0d 45%, #080808 100%)',
+      }}
+    />
+  );
 
   return (
     <section
@@ -43,33 +56,42 @@ export function HeroSection() {
     >
       {/* Background */}
       <div className="absolute inset-0 overflow-hidden bg-ink">
-        {showVideo ? (
-          <video
-            key={videoUrl}
-            className="h-full w-full object-cover"
-            src={videoUrl}
-            poster={poster || undefined}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            aria-hidden="true"
-            onError={() => setVideoFailed(true)}
-          />
-        ) : backgroundImage ? (
-          <div className="h-full w-full animate-slow-zoom">
-            <SmartImage src={backgroundImage} alt="Sivasakthi premium men's grooming" aspect="aspect-auto" className="absolute inset-0 h-full w-full" eager />
-          </div>
-        ) : (
-          <div
-            className="h-full w-full animate-slow-zoom"
-            style={{
-              background:
-                'radial-gradient(120% 90% at 70% 10%, #1c1a14 0%, #0d0d0d 45%, #080808 100%)',
-            }}
-          />
-        )}
+        {/* Mobile (< md): static image only — the <video> is never mounted here,
+            so it is never requested over the network on small screens. */}
+        <div className="h-full w-full md:hidden">
+          {mobileImage ? (
+            <div className="h-full w-full animate-slow-zoom">
+              <SmartImage src={mobileImage} alt="Sivasakthi premium men's grooming" aspect="aspect-auto" className="absolute inset-0 h-full w-full" eager />
+            </div>
+          ) : (
+            gradientBackground
+          )}
+        </div>
+
+        {/* Desktop (>= md): video when enabled, else image/gradient. */}
+        <div className="hidden h-full w-full md:block">
+          {showVideo ? (
+            <video
+              key={videoUrl}
+              className="h-full w-full object-cover"
+              src={videoUrl}
+              poster={poster || undefined}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              aria-hidden="true"
+              onError={() => setVideoFailed(true)}
+            />
+          ) : backgroundImage ? (
+            <div className="h-full w-full animate-slow-zoom">
+              <SmartImage src={backgroundImage} alt="Sivasakthi premium men's grooming" aspect="aspect-auto" className="absolute inset-0 h-full w-full" eager />
+            </div>
+          ) : (
+            gradientBackground
+          )}
+        </div>
         <div className="absolute inset-0" style={{ background: ASCENT_GREY }} />
       </div>
 

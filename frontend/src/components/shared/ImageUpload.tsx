@@ -5,7 +5,7 @@ import { IMAGE_ACCEPT } from '@/components/shared/MediaField';
 
 /**
  * Direct file-upload control for string image fields (e.g. about.imageUrl,
- * offers[].imageUrl, hero.posterUrl/mobileImageUrl). A local file is uploaded
+ * offers[].imageUrl, hero.mobileImageUrl). A local file is uploaded
  * straight to Cloudinary and the returned secure_url is written to the field as
  * a plain https string — exactly like the Logo upload.
  *
