@@ -37,21 +37,13 @@ export default function AdminAboutPage() {
         about: { ...(f.sections?.about ?? ({} as SalonSettings['sections']['about'])), [key]: value },
       } as SalonSettings['sections'],
     }));
-  const setCta = (key: string, value: unknown) =>
-    setForm((f) => ({
-      ...f,
-      sections: {
-        ...(f.sections ?? ({} as SalonSettings['sections'])),
-        cta: { ...(f.sections?.cta ?? ({} as SalonSettings['sections']['cta'])), [key]: value },
-      } as SalonSettings['sections'],
-    }));
 
   const save = () => {
     if (!form) return;
     mut.save.mutate({
-      businessInfo: form.businessInfo,
       about: form.about,
       sections: form.sections,
+      businessInfo: form.businessInfo,
       _id: undefined,
     } as Partial<SalonSettings>);
   };
@@ -64,7 +56,7 @@ export default function AdminAboutPage() {
         <div>
           <h1 className="text-2xl font-semibold text-white">About</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            Business info shown across the whole site, plus the About page story, image and call-to-action.
+            The About page story, image and statistics. Global brand details (name, logo, tagline) are in Settings.
           </p>
         </div>
         <button
@@ -78,32 +70,6 @@ export default function AdminAboutPage() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <AdminCard title="Business information">
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Salon name">
-              <input className="input-dark" value={form.businessInfo?.salonName ?? ''} onChange={(e) => setBI('salonName', e.target.value)} />
-            </Field>
-            <Field label="Tamil name">
-              <input className="input-dark" value={form.businessInfo?.tamilName ?? ''} onChange={(e) => setBI('tamilName', e.target.value)} />
-            </Field>
-            <Field label="Tagline (English)">
-              <input className="input-dark" value={form.businessInfo?.tagline ?? ''} onChange={(e) => setBI('tagline', e.target.value)} />
-            </Field>
-            <Field label="Tagline (Tamil)">
-              <input className="input-dark" value={form.businessInfo?.taglineTamil ?? ''} onChange={(e) => setBI('taglineTamil', e.target.value)} />
-            </Field>
-            <Field label="Experience (years)" hint="Shown on Home, About, Footer and CTA as 'N+ years'.">
-              <input type="number" className="input-dark" value={form.businessInfo?.experienceYears ?? 0} onChange={(e) => setBI('experienceYears', Number(e.target.value))} />
-            </Field>
-            <Field label="Happy customers" hint="Optional stat shown on the About page.">
-              <input type="number" className="input-dark" value={form.businessInfo?.happyCustomers ?? 0} onChange={(e) => setBI('happyCustomers', Number(e.target.value))} />
-            </Field>
-            <Field label="Professional barbers" hint="Optional stat shown on the About page.">
-              <input type="number" className="input-dark" value={form.businessInfo?.professionalBarbers ?? 0} onChange={(e) => setBI('professionalBarbers', Number(e.target.value))} />
-            </Field>
-          </div>
-        </AdminCard>
-
         <AdminCard title="About story">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Eyebrow label" full>
@@ -126,30 +92,25 @@ export default function AdminAboutPage() {
                 aspect="aspect-[4/5]"
               />
             </div>
-            <Field label="Years badge label">
+            <Field label="Years badge label" hint="Small caption under the 'N+ years' badge.">
               <input className="input-dark" value={form.sections?.about?.yearsLabel ?? ''} onChange={(e) => setSection('yearsLabel', e.target.value)} />
             </Field>
           </div>
         </AdminCard>
 
-        <AdminCard title="Call to action (bottom band)">
+        <AdminCard title="About statistics" className="h-fit">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Eyebrow" full>
-              <input className="input-dark" value={form.sections?.cta?.eyebrow ?? ''} onChange={(e) => setCta('eyebrow', e.target.value)} />
+            <Field label="Happy customers" hint="Optional stat card on the About page.">
+              <input type="number" className="input-dark" value={form.businessInfo?.happyCustomers ?? 0} onChange={(e) => setBI('happyCustomers', Number(e.target.value))} />
             </Field>
-            <Field label="Title (Tamil)" full>
-              <textarea className="input-dark min-h-[70px]" value={form.sections?.cta?.title ?? ''} onChange={(e) => setCta('title', e.target.value)} />
-            </Field>
-            <Field label="Subtitle" full>
-              <input className="input-dark" value={form.sections?.cta?.subtitle ?? ''} onChange={(e) => setCta('subtitle', e.target.value)} />
-            </Field>
-            <Field label="Primary button label">
-              <input className="input-dark" value={form.sections?.cta?.primaryCta ?? ''} onChange={(e) => setCta('primaryCta', e.target.value)} />
-            </Field>
-            <Field label="Secondary button label">
-              <input className="input-dark" value={form.sections?.cta?.secondaryCta ?? ''} onChange={(e) => setCta('secondaryCta', e.target.value)} />
+            <Field label="Professional barbers" hint="Optional stat card on the About page.">
+              <input type="number" className="input-dark" value={form.businessInfo?.professionalBarbers ?? 0} onChange={(e) => setBI('professionalBarbers', Number(e.target.value))} />
             </Field>
           </div>
+          <p className="mt-4 text-xs leading-relaxed text-zinc-600">
+            These appear as 'N+ Happy customers' and 'N+ Professional barbers' on the About page. Services, signature
+            styles and gallery counts are calculated automatically.
+          </p>
         </AdminCard>
       </div>
     </div>

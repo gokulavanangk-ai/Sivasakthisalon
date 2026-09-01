@@ -172,7 +172,7 @@ function syncBusinessInfo(settings: SalonSettingsDocument, data?: Partial<SalonS
     social.whatsapp = bi.whatsapp ?? social.whatsapp;
     social.email = bi.email ?? social.email;
     social.instagram = bi.instagram ?? social.instagram;
-    maps.directionsUrl = bi.googleMapsUrl ?? maps.directionsUrl;
+    maps.directionsUrl = data?.maps?.directionsUrl ?? bi.googleMapsUrl ?? maps.directionsUrl;
   }
 
   settings.businessInfo = {

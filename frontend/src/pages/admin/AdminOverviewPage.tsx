@@ -90,7 +90,10 @@ export default function AdminOverviewPage() {
               Upload gallery images
             </Link>
             <Link to="/admin/settings" className="block rounded-md bg-white/5 px-4 py-3 text-sm text-zinc-200 transition-colors hover:bg-white/10">
-              Salon settings & hours
+              Brand & global settings
+            </Link>
+            <Link to="/admin/content/contact" className="block rounded-md bg-white/5 px-4 py-3 text-sm text-zinc-200 transition-colors hover:bg-white/10">
+              Contact details & business hours
             </Link>
           </div>
         </div>

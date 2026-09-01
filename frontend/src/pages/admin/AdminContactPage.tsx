@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useSalon } from '@/hooks/useContent';
+import { useSalon, useBusinessHours } from '@/hooks/useContent';
 import { useSettingsMutations } from '@/features/admin/mutations';
-import { AdminCard } from '@/features/admin/ui';
+import { AdminCard, Toggle } from '@/features/admin/ui';
 import { Save, RotateCcw, AlertTriangle } from 'lucide-react';
 import LeafletMap, {
   DEFAULT_LATITUDE,
@@ -10,7 +10,19 @@ import LeafletMap, {
   isValidLongitude,
   isValidCoordinate,
 } from '@/components/shared/LeafletMap';
-import type { SalonSettings } from '@/types';
+import type { BusinessHours, DayHours, SalonSettings, WeekDay } from '@/types';
+
+const WEEK_DAYS: { key: WeekDay; label: string; tamil: string }[] = [
+  { key: 'monday', label: 'Monday', tamil: 'திங்கள்' },
+  { key: 'tuesday', label: 'Tuesday', tamil: 'செவ்வாய்' },
+  { key: 'wednesday', label: 'Wednesday', tamil: 'புதன்' },
+  { key: 'thursday', label: 'Thursday', tamil: 'வியாழன்' },
+  { key: 'friday', label: 'Friday', tamil: 'வெள்ளி' },
+  { key: 'saturday', label: 'Saturday', tamil: 'சனி' },
+  { key: 'sunday', label: 'Sunday', tamil: 'ஞாயிறு' },
+];
+
+const defaultDay: DayHours = { open: '09:00', close: '21:00', isOpen: true, breakStart: '', breakEnd: '' };
 
 function Field({ label, full, hint, children }: { label: string; full?: boolean; hint?: string; children: React.ReactNode }) {
   return (
@@ -24,12 +36,37 @@ function Field({ label, full, hint, children }: { label: string; full?: boolean;
 
 export default function AdminContactPage() {
   const { data: salon, isLoading } = useSalon();
+  const { data: hoursData } = useBusinessHours();
   const mut = useSettingsMutations();
   const [form, setForm] = useState<Partial<SalonSettings>>({});
+  const [businessHours, setBusinessHours] = useState<BusinessHours>(() => ({
+    workingHours: {} as Record<WeekDay, DayHours>,
+    slotDurationMinutes: 30,
+    blockedDates: [],
+    timezone: '',
+  }));
 
   useEffect(() => {
     if (salon) setForm(salon);
   }, [salon]);
+
+  useEffect(() => {
+    if (hoursData) {
+      setBusinessHours({
+        workingHours: hoursData.workingHours ?? {} as Record<WeekDay, DayHours>,
+        slotDurationMinutes: hoursData.slotDurationMinutes ?? 30,
+        blockedDates: hoursData.blockedDates ?? [],
+        timezone: hoursData.timezone ?? '',
+      });
+    }
+  }, [hoursData]);
+
+  const setDay = (day: WeekDay, patch: Partial<DayHours>) => {
+    setBusinessHours((h) => ({
+      ...h,
+      workingHours: { ...h.workingHours, [day]: { ...(h.workingHours[day] ?? defaultDay), ...patch } },
+    }));
+  };
 
   const setBI = (key: keyof SalonSettings['businessInfo'], value: unknown) =>
     setForm((f) => ({ ...f, businessInfo: { ...(f.businessInfo ?? {} as SalonSettings['businessInfo']), [key]: value } }));
@@ -94,6 +131,7 @@ export default function AdminContactPage() {
       maps: form.maps,
       _id: undefined,
     } as Partial<SalonSettings>);
+    mut.hours.mutate(businessHours);
   };
 
   if (isLoading) return <p className="py-8 text-sm text-zinc-500">Loading…</p>;
@@ -152,6 +190,12 @@ export default function AdminContactPage() {
 
         <AdminCard title="Map & location">
           <div className="grid grid-cols-2 gap-3">
+            <Field label="Google Maps embed URL" full hint="Optional iframe URL. If set, a static map preview shows on the contact page alongside the interactive map.">
+              <input className="input-dark" value={form.maps?.embedUrl ?? ''} onChange={(e) => setMaps('embedUrl', e.target.value)} placeholder="https://www.google.com/maps/embed?..." />
+            </Field>
+            <Field label="Directions URL" full hint="Link behind the 'Get Directions' button. Falls back to the map pin location.">
+              <input className="input-dark" value={form.maps?.directionsUrl ?? ''} onChange={(e) => setMaps('directionsUrl', e.target.value)} placeholder="https://maps.google.com/?q=..." />
+            </Field>
             <Field label="Latitude" hint={latValid ? undefined : 'Must be between -90 and 90'}>
               <input
                 className="input-dark"
@@ -222,6 +266,35 @@ export default function AdminContactPage() {
             <Field label="Address card title"><input className="input-dark" value={form.sections?.contact?.addressTitle ?? ''} onChange={(e) => setSection('addressTitle', e.target.value)} /></Field>
             <Field label="Address card Tamil"><input className="input-dark" value={form.sections?.contact?.addressTamil ?? ''} onChange={(e) => setSection('addressTamil', e.target.value)} /></Field>
             <Field label="Opening hours label"><input className="input-dark" value={form.sections?.contact?.openingHoursTitle ?? ''} onChange={(e) => setSection('openingHoursTitle', e.target.value)} /></Field>
+          </div>
+        </AdminCard>
+
+        <AdminCard title="Business hours & slots">
+          <div className="mb-4 flex items-center gap-3">
+            <Field label="Slot duration (minutes)">
+              <input type="number" className="input-dark w-28" value={businessHours.slotDurationMinutes ?? 30} onChange={(e) => setBusinessHours((h) => ({ ...h, slotDurationMinutes: Number(e.target.value) }))} />
+            </Field>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {WEEK_DAYS.map((day) => {
+              const dh = (businessHours.workingHours ?? {})[day.key] ?? defaultDay;
+              return (
+                <div key={day.key} className="rounded-md border border-white/10 p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-white">{day.label} <span className="ml-1 text-xs text-zinc-500">{day.tamil}</span></p>
+                    <Toggle label="" checked={Boolean(dh.isOpen)} onChange={(v) => setDay(day.key, { isOpen: v })} />
+                  </div>
+                  {dh.isOpen && (
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <input type="time" className="input-dark" value={dh.open} onChange={(e) => setDay(day.key, { open: e.target.value })} />
+                      <input type="time" className="input-dark" value={dh.close} onChange={(e) => setDay(day.key, { close: e.target.value })} />
+                      <input type="time" className="input-dark" value={dh.breakStart || ''} onChange={(e) => setDay(day.key, { breakStart: e.target.value })} placeholder="Break start" />
+                      <input type="time" className="input-dark" value={dh.breakEnd || ''} onChange={(e) => setDay(day.key, { breakEnd: e.target.value })} placeholder="Break end" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </AdminCard>
       </div>

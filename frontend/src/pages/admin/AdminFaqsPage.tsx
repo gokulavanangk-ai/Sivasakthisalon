@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { useFaqs } from '@/hooks/useContent';
-import { useFaqMutations } from '@/features/admin/mutations';
+import { useEffect, useState } from 'react';
+import { useFaqs, useSalon } from '@/hooks/useContent';
+import { useFaqMutations, useSettingsMutations } from '@/features/admin/mutations';
 import { AdminCard, Toggle } from '@/features/admin/ui';
-import { Pencil, Trash2, Plus, X } from 'lucide-react';
-import type { Faq } from '@/types';
+import { Pencil, Trash2, Plus, X, Save } from 'lucide-react';
+import type { Faq, SalonSettings } from '@/types';
 
 const emptyForm: Partial<Faq> = {
   question: '',
@@ -14,8 +14,31 @@ const emptyForm: Partial<Faq> = {
 
 export default function AdminFaqsPage() {
   const { data, isLoading } = useFaqs();
+  const { data: salon } = useSalon();
   const mut = useFaqMutations();
+  const settingsMut = useSettingsMutations();
   const [form, setForm] = useState<Partial<Faq> | null>(null);
+  const [sections, setSections] = useState<Partial<SalonSettings['sections']>>({});
+  const [faqEnabled, setFaqEnabled] = useState(false);
+
+  useEffect(() => {
+    if (salon) {
+      setSections({ faq: salon.sections?.faq });
+      setFaqEnabled(Boolean(salon.toggles?.faqEnabled));
+    }
+  }, [salon]);
+
+  const setFaqSection = (key: string, value: unknown) =>
+    setSections((s) => ({ ...s, faq: { ...(s.faq ?? {} as SalonSettings['sections']['faq']), [key]: value } }));
+
+  const saveFaqSection = () => {
+    if (!salon?._id) return;
+    settingsMut.save.mutate({
+      sections: { ...salon.sections, faq: sections.faq },
+      toggles: { ...salon.toggles, faqEnabled },
+      _id: undefined,
+    } as Partial<SalonSettings>);
+  };
 
   const save = () => {
     if (!form) return;
@@ -32,16 +55,43 @@ export default function AdminFaqsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-white">FAQ</h1>
-          <p className="mt-1 text-sm text-zinc-500">Questions shown in the FAQ section of the website.</p>
+          <p className="mt-1 text-sm text-zinc-500">FAQ section heading and the questions shown on the website.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setForm({ ...emptyForm })}
-          className="inline-flex items-center gap-2 rounded-md bg-gold px-4 py-2 text-sm font-semibold text-black hover:bg-gold-300"
-        >
-          <Plus className="h-4 w-4" /> Add question
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={saveFaqSection}
+            disabled={settingsMut.save.isPending}
+            className="inline-flex items-center gap-2 rounded-md border border-white/15 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 disabled:opacity-50"
+          >
+            <Save className="h-4 w-4" /> {settingsMut.save.isPending ? 'Saving…' : 'Save section settings'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setForm({ ...emptyForm })}
+            className="inline-flex items-center gap-2 rounded-md bg-gold px-4 py-2 text-sm font-semibold text-black hover:bg-gold-300"
+          >
+            <Plus className="h-4 w-4" /> Add question
+          </button>
+        </div>
       </div>
+
+      <AdminCard title="FAQ section">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Field label="Eyebrow label">
+            <input className="input-dark" value={sections.faq?.eyebrow ?? ''} onChange={(e) => setFaqSection('eyebrow', e.target.value)} />
+          </Field>
+          <Field label="English title">
+            <input className="input-dark" value={sections.faq?.englishTitle ?? ''} onChange={(e) => setFaqSection('englishTitle', e.target.value)} />
+          </Field>
+          <Field label="Tamil title">
+            <input className="input-dark" value={sections.faq?.title ?? ''} onChange={(e) => setFaqSection('title', e.target.value)} />
+          </Field>
+          <div className="rounded-md border border-white/10 p-3">
+            <Toggle label="Show FAQ section" checked={faqEnabled} onChange={setFaqEnabled} />
+          </div>
+        </div>
+      </AdminCard>
 
       {isLoading ? (
         <p className="py-8 text-sm text-zinc-500">Loading…</p>

@@ -8,7 +8,7 @@ import { LoadingSpinner } from '@/components/ui/Feedback';
 const NAV = [
   { to: '/admin', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/admin/bookings', label: 'Bookings', icon: CalendarCheck },
-  { to: '/admin/content', label: 'Website', icon: LayoutTemplate },
+  { to: '/admin/content', label: 'Home', icon: LayoutTemplate },
   { to: '/admin/content/about', label: 'About', icon: Info },
   { to: '/admin/services', label: 'Services', icon: Scissors },
   { to: '/admin/styles', label: 'Styles', icon: Ruler },
