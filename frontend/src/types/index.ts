@@ -175,7 +175,7 @@ export interface SalonSettings {
     phone: string;
     email: string;
   };
-  maps: { embedUrl: string; directionsUrl: string };
+  maps: { embedUrl: string; directionsUrl: string; latitude: number; longitude: number };
   toggles: {
     pricingVisible: boolean;
     beforeAfterEnabled: boolean;

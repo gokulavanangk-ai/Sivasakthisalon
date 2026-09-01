@@ -111,6 +111,8 @@ export const salonSettingsSchema = z.object({
       .object({
         embedUrl: z.string().max(800).optional(),
         directionsUrl: z.string().max(800).optional(),
+        latitude: z.number().min(-90).max(90).optional(),
+        longitude: z.number().min(-180).max(180).optional(),
       })
       .optional(),
     toggles: z

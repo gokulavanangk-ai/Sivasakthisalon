@@ -106,6 +106,50 @@
     @apply w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-gold/60 focus:outline-none;
   }
 
+  .map-container {
+    width: 100%;
+    height: 400px;
+    min-height: 300px;
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+
+  .map-container .leaflet-container {
+    background: #1a1a1a;
+    font-family: inherit;
+  }
+
+  .map-container .leaflet-popup-content-wrapper,
+  .map-container .leaflet-popup-tip {
+    background: #141414;
+    color: #f5f1e8;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .map-container .leaflet-popup-content {
+    font-size: 13px;
+    margin: 12px 14px;
+  }
+
+  .map-container .leaflet-bar a {
+    background: #141414;
+    color: #f5f1e8;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .map-container .leaflet-bar a:hover {
+    background: #2a2a2a;
+  }
+
+  .map-container a.leaflet-control-attribution {
+    color: rgba(245, 241, 232, 0.6);
+  }
+
+  .map-container .leaflet-container a.leaflet-control-zoom-in,
+  .map-container .leaflet-container a.leaflet-control-zoom-out {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
   .grain::after {
     content: '';
     pointer-events: none;

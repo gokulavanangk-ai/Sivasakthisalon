@@ -1,8 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSalon } from '@/hooks/useContent';
 import { useSettingsMutations } from '@/features/admin/mutations';
 import { AdminCard } from '@/features/admin/ui';
-import { Save } from 'lucide-react';
+import { Save, RotateCcw, AlertTriangle } from 'lucide-react';
+import LeafletMap, {
+  DEFAULT_LATITUDE,
+  DEFAULT_LONGITUDE,
+  isValidLatitude,
+  isValidLongitude,
+  isValidCoordinate,
+} from '@/components/shared/LeafletMap';
 import type { SalonSettings } from '@/types';
 
 function Field({ label, full, hint, children }: { label: string; full?: boolean; hint?: string; children: React.ReactNode }) {
@@ -35,10 +42,52 @@ export default function AdminContactPage() {
       } as SalonSettings['sections'],
     }));
   const setMaps = (key: keyof SalonSettings['maps'], value: unknown) =>
-    setForm((f) => ({ ...f, maps: { ...(f.maps ?? { embedUrl: '', directionsUrl: '' }), [key]: value } }));
+    setForm((f) => ({
+      ...f,
+      maps: { ...(f.maps ?? { embedUrl: '', directionsUrl: '', latitude: DEFAULT_LATITUDE, longitude: DEFAULT_LONGITUDE }), [key]: value },
+    }));
+
+  const latitude = Number(form.maps?.latitude ?? DEFAULT_LATITUDE);
+  const longitude = Number(form.maps?.longitude ?? DEFAULT_LONGITUDE);
+  const latValid = isValidLatitude(latitude);
+  const lngValid = isValidLongitude(longitude);
+  const coordinateValid = isValidCoordinate(latitude, longitude);
+
+  const handleLocationChange = useCallback((lat: number, lng: number) => {
+    setForm((f) => ({
+      ...f,
+      maps: {
+        ...(f.maps ?? { embedUrl: '', directionsUrl: '', latitude: DEFAULT_LATITUDE, longitude: DEFAULT_LONGITUDE }),
+        latitude: Number(lat.toFixed(6)),
+        longitude: Number(lng.toFixed(6)),
+      },
+    }));
+  }, []);
+
+  const resetMap = () => {
+    setForm((f) => ({
+      ...f,
+      maps: {
+        ...(f.maps ?? { embedUrl: '', directionsUrl: '', latitude: DEFAULT_LATITUDE, longitude: DEFAULT_LONGITUDE }),
+        latitude: DEFAULT_LATITUDE,
+        longitude: DEFAULT_LONGITUDE,
+      },
+    }));
+  };
+
+  const handleLatInput = (value: string) => {
+    const v = value === '' ? '' : Number(value);
+    setMaps('latitude', v === '' ? DEFAULT_LATITUDE : v);
+  };
+
+  const handleLngInput = (value: string) => {
+    const v = value === '' ? '' : Number(value);
+    setMaps('longitude', v === '' ? DEFAULT_LONGITUDE : v);
+  };
 
   const save = () => {
     if (!form) return;
+    if (!coordinateValid) return;
     mut.save.mutate({
       businessInfo: form.businessInfo,
       sections: form.sections,
@@ -61,7 +110,7 @@ export default function AdminContactPage() {
         <button
           type="button"
           onClick={save}
-          disabled={mut.save.isPending}
+          disabled={mut.save.isPending || !coordinateValid}
           className="inline-flex items-center gap-2 rounded-md bg-gold px-5 py-2 text-sm font-semibold text-black hover:bg-gold-300 disabled:opacity-50"
         >
           <Save className="h-4 w-4" /> {mut.save.isPending ? 'Saving…' : 'Save Changes'}
@@ -101,19 +150,60 @@ export default function AdminContactPage() {
           </div>
         </AdminCard>
 
-        <AdminCard title="Maps & directions">
+        <AdminCard title="Map & location">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Google Maps embed URL" full hint="Shown as the map iframe on the Contact page.">
-              <input className="input-dark" value={form.maps?.embedUrl ?? ''} onChange={(e) => setMaps('embedUrl', e.target.value)} placeholder="https://www.google.com/maps?q=…" />
+            <Field label="Latitude" hint={latValid ? undefined : 'Must be between -90 and 90'}>
+              <input
+                className="input-dark"
+                type="number"
+                step="any"
+                value={Number.isFinite(latitude) ? latitude : ''}
+                onChange={(e) => handleLatInput(e.target.value)}
+                disabled={mut.save.isPending}
+              />
             </Field>
-            <Field label="Google Maps location URL" full hint="Used for the 'Get Directions' button and map fallback.">
-              <input className="input-dark" value={form.businessInfo?.googleMapsUrl ?? ''} onChange={(e) => setBI('googleMapsUrl', e.target.value)} placeholder="https://www.google.com/maps?q=…" />
+            <Field label="Longitude" hint={lngValid ? undefined : 'Must be between -180 and 180'}>
+              <input
+                className="input-dark"
+                type="number"
+                step="any"
+                value={Number.isFinite(longitude) ? longitude : ''}
+                onChange={(e) => handleLngInput(e.target.value)}
+                disabled={mut.save.isPending}
+              />
             </Field>
-            {form.maps?.embedUrl && (
-              <div className="col-span-2">
-                <iframe title="Map preview" src={form.maps.embedUrl} className="h-52 w-full rounded-md border border-white/10 grayscale-[0.4] invert-[0.92] hue-rotate-180 contrast-[0.9]" loading="lazy" />
+
+            {!coordinateValid && (
+              <div className="col-span-2 inline-flex items-center gap-1.5 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180.
               </div>
             )}
+
+            <div className="col-span-2">
+              <LeafletMap
+                latitude={latitude}
+                longitude={longitude}
+                draggable
+                onLocationChange={handleLocationChange}
+                className="h-[360px] w-full overflow-hidden rounded-md border border-white/10"
+                popupText={form.businessInfo?.address || 'Salon location'}
+              />
+              <p className="mt-2 text-[11px] text-zinc-600">
+                Drag the marker or click anywhere on the map to set the exact location.
+              </p>
+            </div>
+
+            <div className="col-span-2 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={resetMap}
+                disabled={mut.save.isPending}
+                className="inline-flex items-center gap-1.5 rounded-md border border-white/15 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-white/10 disabled:opacity-50"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Reset to default
+              </button>
+            </div>
           </div>
         </AdminCard>
 

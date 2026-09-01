@@ -133,6 +133,37 @@ export function isValidMediaUrl(value?: string): boolean {
   return /^https?:\/\/\S+$/i.test(v) || v.startsWith('/');
 }
 
+/**
+ * Extracts a usable URL from a value that may be a plain URL or a full embed
+ * snippet (e.g. '<iframe src="https://..."></iframe>'). Returns '' if no valid
+ * http(s) URL can be found. Used to harden legacy Google Maps embed fields that
+ * were accidentally saved with the surrounding iframe markup.
+ */
+export function extractEmbedUrl(value?: string | null): string {
+  if (!value) return '';
+  const raw = value.trim();
+  if (!raw) return '';
+
+  const srcMatch = raw.match(/src\s*=\s*["']([^"']+)["']/i);
+  const candidate = srcMatch ? srcMatch[1] : raw;
+  if (/^https?:\/\/\S+$/i.test(candidate)) return candidate;
+
+  // Allow maps.google.com / google.com/maps embed URLs specifically, even if
+  // the generic http(s) test already caught them; reject everything else.
+  return '';
+}
+
+export function isValidDirectionsUrl(value?: string | null): boolean {
+  const url = extractEmbedUrl(value);
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return /^https?:$/.test(parsed.protocol);
+  } catch {
+    return false;
+  }
+}
+
 export interface HeroMediaResolved {
   videoUrl: string;
   imageUrl: string;

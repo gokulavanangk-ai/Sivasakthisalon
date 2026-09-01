@@ -3,7 +3,8 @@ import { useSalon, useBusinessHours, useBarbers } from '@/hooks/useContent';
 import { useSettingsMutations, useBarberMutations } from '@/features/admin/mutations';
 import { AdminCard, Toggle } from '@/features/admin/ui';
 import { ImageUpload } from '@/components/shared/ImageUpload';
-import { Trash2, Plus, Upload, X } from 'lucide-react';
+import LeafletMap, { DEFAULT_LATITUDE, DEFAULT_LONGITUDE, isValidCoordinate } from '@/components/shared/LeafletMap';
+import { Trash2, Plus, Upload, X, AlertTriangle } from 'lucide-react';
 import type { SalonSettings, BusinessHours, WeekDay, DayHours, Barber } from '@/types';
 
 const WEEK_DAYS: { key: WeekDay; label: string; tamil: string }[] = [
@@ -154,18 +155,62 @@ export default function AdminSettingsPage() {
           </div>
         </AdminCard>
 
-        {/* Contact */}
-        <AdminCard title="Contact & social">
+        {/* Contact & location */}
+        <AdminCard title="Contact & location">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Phone"><input className="input-dark" value={settings.social?.phone ?? ''} onChange={(e) => setSettings((s) => ({ ...s, social: { ...s.social!, phone: e.target.value } }))} /></Field>
             <Field label="WhatsApp"><input className="input-dark" value={settings.social?.whatsapp ?? ''} onChange={(e) => setSettings((s) => ({ ...s, social: { ...s.social!, whatsapp: e.target.value } }))} /></Field>
             <Field label="Instagram handle"><input className="input-dark" value={settings.social?.instagram ?? ''} onChange={(e) => setSettings((s) => ({ ...s, social: { ...s.social!, instagram: e.target.value } }))} /></Field>
             <Field label="Email"><input className="input-dark" value={settings.social?.email ?? ''} onChange={(e) => setSettings((s) => ({ ...s, social: { ...s.social!, email: e.target.value } }))} /></Field>
-            <Field label="Google Maps embed URL"><input className="input-dark col-span-2" value={settings.maps?.embedUrl ?? ''} onChange={(e) => setSettings((s) => ({ ...s, maps: { ...s.maps!, embedUrl: e.target.value } }))} /></Field>
-            <Field label="Directions URL"><input className="input-dark col-span-2" value={settings.maps?.directionsUrl ?? ''} onChange={(e) => setSettings((s) => ({ ...s, maps: { ...s.maps!, directionsUrl: e.target.value } }))} /></Field>
+            <Field label="Google Maps embed URL"><input className="input-dark col-span-2" value={settings.maps?.embedUrl ?? ''} onChange={(e) => setSettings((s) => ({ ...s, maps: { ...(s.maps ?? { embedUrl: '', directionsUrl: '', latitude: DEFAULT_LATITUDE, longitude: DEFAULT_LONGITUDE }), embedUrl: e.target.value } }))} /></Field>
+            <Field label="Directions URL"><input className="input-dark col-span-2" value={settings.maps?.directionsUrl ?? ''} onChange={(e) => setSettings((s) => ({ ...s, maps: { ...(s.maps ?? { embedUrl: '', directionsUrl: '', latitude: DEFAULT_LATITUDE, longitude: DEFAULT_LONGITUDE }), directionsUrl: e.target.value } }))} /></Field>
             <Field label="Notification email (booking alerts)">
               <input className="input-dark col-span-2" type="email" value={settings.notificationEmail ?? ''} onChange={(e) => setField('notificationEmail', e.target.value)} placeholder="owner@example.com" />
             </Field>
+            <Field label="Latitude" hint="Between -90 and 90">
+              <input
+                type="number"
+                step="any"
+                className="input-dark"
+                value={settings.maps?.latitude ?? DEFAULT_LATITUDE}
+                onChange={(e) => setSettings((s) => ({ ...s, maps: { ...(s.maps ?? { embedUrl: '', directionsUrl: '', latitude: DEFAULT_LATITUDE, longitude: DEFAULT_LONGITUDE }), latitude: Number(e.target.value) } }))}
+              />
+            </Field>
+            <Field label="Longitude" hint="Between -180 and 180">
+              <input
+                type="number"
+                step="any"
+                className="input-dark"
+                value={settings.maps?.longitude ?? DEFAULT_LONGITUDE}
+                onChange={(e) => setSettings((s) => ({ ...s, maps: { ...(s.maps ?? { embedUrl: '', directionsUrl: '', latitude: DEFAULT_LATITUDE, longitude: DEFAULT_LONGITUDE }), longitude: Number(e.target.value) } }))}
+              />
+            </Field>
+            {(settings.maps?.latitude !== undefined || settings.maps?.longitude !== undefined) && (
+              <div className="col-span-2">
+                <LeafletMap
+                  latitude={settings.maps?.latitude ?? DEFAULT_LATITUDE}
+                  longitude={settings.maps?.longitude ?? DEFAULT_LONGITUDE}
+                  draggable
+                  onLocationChange={(lat, lng) =>
+                    setSettings((s) => ({
+                      ...s,
+                      maps: {
+                        ...(s.maps ?? { embedUrl: '', directionsUrl: '', latitude: DEFAULT_LATITUDE, longitude: DEFAULT_LONGITUDE }),
+                        latitude: Number(lat.toFixed(6)),
+                        longitude: Number(lng.toFixed(6)),
+                      },
+                    }))
+                  }
+                  className="h-[300px] w-full overflow-hidden rounded-md border border-white/10"
+                  popupText="Salon location"
+                />
+                {!isValidCoordinate(settings.maps?.latitude ?? Number.NaN, settings.maps?.longitude ?? Number.NaN) && (
+                  <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-red-400">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </AdminCard>
 
@@ -316,11 +361,12 @@ export default function AdminSettingsPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs font-medium text-zinc-400">{label}</span>
       {children}
+      {hint && <span className="mt-1 block text-[11px] text-zinc-600">{hint}</span>}
     </label>
   );
 }

@@ -212,6 +212,8 @@ export const SECTIONS: SectionMeta[] = [
       { key: 'social.email', label: 'Email', type: 'text' },
       { key: 'maps.embedUrl', label: 'Google Maps embed URL', type: 'url', full: true },
       { key: 'maps.directionsUrl', label: 'Directions URL', type: 'url', full: true },
+      { key: 'maps.latitude', label: 'Latitude', type: 'number', min: -90, full: false },
+      { key: 'maps.longitude', label: 'Longitude', type: 'number', min: -180, full: false },
       { key: 'sections.contact.callTitle', label: 'Call card title', type: 'text' },
       { key: 'sections.contact.callTamil', label: 'Call card Tamil', type: 'text' },
       { key: 'sections.contact.whatsappTitle', label: 'WhatsApp card title', type: 'text' },

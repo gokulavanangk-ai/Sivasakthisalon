@@ -156,7 +156,7 @@ const mergeSectionDefaults = (settings: SalonSettingsDocument): void => {
 function syncBusinessInfo(settings: SalonSettingsDocument, data?: Partial<SalonSettingsDocument>): void {
   const bi = settings.businessInfo ?? (settings.businessInfo = {} as BusinessInfo);
   const social = settings.social ?? (settings.social = { whatsapp: '', instagram: '', phone: '', email: '' });
-  const maps = settings.maps ?? (settings.maps = { embedUrl: '', directionsUrl: '' });
+  const maps = settings.maps ?? (settings.maps = { embedUrl: '', directionsUrl: '', latitude: 9.5919, longitude: 77.9732 });
   const about = settings.about ?? (settings.about = { heading: '', body: '', imageUrl: '', experienceYears: 23 });
 
   if (data?.businessInfo) {

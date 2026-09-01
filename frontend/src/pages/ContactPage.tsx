@@ -3,7 +3,8 @@ import { useSalon, useBusinessHours } from '@/hooks/useContent';
 import { SectionHeading } from '@/components/shared/SectionHeading';
 import { Reveal } from '@/components/shared/Reveal';
 import { whatsappLink, instagramLink } from '@/constants';
-import { formatPhone, businessInfoOf } from '@/lib/utils';
+import { formatPhone, businessInfoOf, isValidDirectionsUrl } from '@/lib/utils';
+import LeafletMap, { DEFAULT_LATITUDE, DEFAULT_LONGITUDE } from '@/components/shared/LeafletMap';
 import { FaqSection } from '@/features/faq/FaqSection';
 
 const WEEK_LABELS: Record<string, string> = {
@@ -33,7 +34,10 @@ export default function ContactPage() {
 
   const phone = bi.phone;
   const directionsUrl = bi.googleMapsUrl;
-  const mapEmbed = salon?.maps?.embedUrl || bi.googleMapsUrl;
+  const directionsValid = isValidDirectionsUrl(directionsUrl);
+
+  const latitude = salon?.maps?.latitude ?? DEFAULT_LATITUDE;
+  const longitude = salon?.maps?.longitude ?? DEFAULT_LONGITUDE;
 
   const sec = salon?.sections?.contact;
   const contact = {
@@ -122,13 +126,11 @@ export default function ContactPage() {
       <div className="container-x mt-14">
         <Reveal>
           <div className="relative overflow-hidden rounded-md border border-line">
-            <iframe
-              title={`${bi.salonName} location map`}
-              src={mapEmbed}
-              className="h-[420px] w-full grayscale-[0.4] invert-[0.92] hue-rotate-180 contrast-[0.9]"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              allowFullScreen
+            <LeafletMap
+              latitude={latitude}
+              longitude={longitude}
+              scrollWheelZoom
+              popupText={`${bi.salonName || 'Salon'} — ${bi.address || ''}`}
             />
             <div className="pointer-events-none absolute inset-0 border border-line/40" />
           </div>
@@ -167,9 +169,20 @@ export default function ContactPage() {
               <a href={`tel:+91${phone}`} className="btn-primary">
                 <Phone className="h-4 w-4" /> Call Now
               </a>
-              <a href={directionsUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost">
-                <Navigation className="h-4 w-4" /> Get Directions
-              </a>
+              {directionsValid ? (
+                <a href={directionsUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost">
+                  <Navigation className="h-4 w-4" /> Get Directions
+                </a>
+              ) : (
+                <a
+                  href={`https://www.google.com/maps?q=${latitude},${longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-ghost"
+                >
+                  <Navigation className="h-4 w-4" /> Get Directions
+                </a>
+              )}
             </div>
           </div>
         </Reveal>

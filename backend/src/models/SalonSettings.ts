@@ -147,7 +147,7 @@ export interface SalonSettingsDocument extends Document {
   notificationEmail: string;
   experienceYears: number;
   social: SocialLinks;
-  maps: { embedUrl: string; directionsUrl: string };
+  maps: { embedUrl: string; directionsUrl: string; latitude: number; longitude: number };
   toggles: FeatureToggles;
   sections: WebsiteSections;
   offers: OffersConfig;
@@ -234,6 +234,8 @@ const salonSchema: Schema = new mongoose.Schema(
     maps: {
       embedUrl: { type: String, default: '' },
       directionsUrl: { type: String, default: '' },
+      latitude: { type: Number, default: 9.5919 },
+      longitude: { type: Number, default: 77.9732 },
     },
     toggles: {
       pricingVisible: { type: Boolean, default: false },
