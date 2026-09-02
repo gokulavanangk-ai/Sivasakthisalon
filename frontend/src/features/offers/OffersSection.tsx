@@ -2,6 +2,7 @@ import { useSalon } from '@/hooks/useContent';
 import { SectionHeading } from '@/components/shared/SectionHeading';
 import { Reveal } from '@/components/shared/Reveal';
 import { SmartImage } from '@/components/shared/SmartImage';
+import { Flame } from 'lucide-react';
 
 export function OffersSection() {
   const { data: salon } = useSalon();
@@ -42,9 +43,19 @@ export function OffersSection() {
               />
 
               {offer.badge && (
-                <span className="absolute right-3 top-3 z-20 rounded-full bg-gold px-3 py-1 font-sans text-[10px] font-bold uppercase tracking-widest text-ink shadow-[0_0_20px_rgba(212,175,55,0.5)]">
-                  {offer.badge}
-                </span>
+                <div className="absolute -right-10 top-5 z-20 rotate-45">
+                  {/* soft pulsing glow behind the ribbon */}
+                  <span className="absolute inset-0 -z-10 animate-pulse rounded-full bg-gold/50 blur-md" />
+                  <div
+                    className="flex items-center gap-1.5 whitespace-nowrap px-11 py-1.5 font-sans text-[10px] font-bold uppercase tracking-widest text-ink shadow-[0_4px_18px_rgba(0,0,0,0.45)]"
+                    style={{
+                      background: 'linear-gradient(135deg, #f3d47a 0%, #d4af37 45%, #b8891f 100%)',
+                    }}
+                  >
+                    <Flame className="h-3 w-3 shrink-0 fill-ink/80" />
+                    {offer.badge}
+                  </div>
+                </div>
               )}
 
               {offer.imageUrl ? (
