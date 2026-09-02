@@ -29,20 +29,11 @@ export default function AdminAboutPage() {
     setForm((f) => ({ ...f, businessInfo: { ...(f.businessInfo ?? {} as SalonSettings['businessInfo']), [key]: value } }));
   const setAbout = (key: keyof SalonSettings['about'], value: unknown) =>
     setForm((f) => ({ ...f, about: { ...(f.about ?? {} as SalonSettings['about']), [key]: value } }));
-  const setSection = (key: string, value: unknown) =>
-    setForm((f) => ({
-      ...f,
-      sections: {
-        ...(f.sections ?? ({} as SalonSettings['sections'])),
-        about: { ...(f.sections?.about ?? ({} as SalonSettings['sections']['about'])), [key]: value },
-      } as SalonSettings['sections'],
-    }));
 
   const save = () => {
     if (!form) return;
     mut.save.mutate({
       about: form.about,
-      sections: form.sections,
       businessInfo: form.businessInfo,
       _id: undefined,
     } as Partial<SalonSettings>);
@@ -56,7 +47,7 @@ export default function AdminAboutPage() {
         <div>
           <h1 className="text-2xl font-semibold text-white">About</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            The About page story, image and statistics. Global brand details (name, logo, tagline) are in Settings.
+            Content for the dedicated About page (/about). Home page story section is edited in the Home tab.
           </p>
         </div>
         <button
@@ -70,19 +61,13 @@ export default function AdminAboutPage() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <AdminCard title="About story">
+        <AdminCard title="About page content">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Eyebrow label" full>
-              <input className="input-dark" value={form.sections?.about?.eyebrow ?? ''} onChange={(e) => setSection('eyebrow', e.target.value)} />
-            </Field>
             <Field label="Heading (Tamil)" full>
               <textarea className="input-dark min-h-[70px]" value={form.about?.heading ?? ''} onChange={(e) => setAbout('heading', e.target.value)} />
             </Field>
             <Field label="Body text (Tamil)" full>
               <textarea className="input-dark min-h-[90px]" value={form.about?.body ?? ''} onChange={(e) => setAbout('body', e.target.value)} />
-            </Field>
-            <Field label="Story note (Tamil)" full>
-              <textarea className="input-dark min-h-[70px]" value={form.sections?.about?.storyNote ?? ''} onChange={(e) => setSection('storyNote', e.target.value)} />
             </Field>
             <div className="col-span-2">
               <ImageUpload
@@ -92,10 +77,11 @@ export default function AdminAboutPage() {
                 aspect="aspect-[4/5]"
               />
             </div>
-            <Field label="Years badge label" hint="Small caption under the 'N+ years' badge.">
-              <input className="input-dark" value={form.sections?.about?.yearsLabel ?? ''} onChange={(e) => setSection('yearsLabel', e.target.value)} />
-            </Field>
           </div>
+          <p className="mt-3 text-xs leading-relaxed text-zinc-600">
+            This content appears on the dedicated About page (/about). Home page story section copy
+            (eyebrow, story note, years label) is managed from the Home tab.
+          </p>
         </AdminCard>
 
         <AdminCard title="About statistics" className="h-fit">

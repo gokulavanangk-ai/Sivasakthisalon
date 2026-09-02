@@ -75,7 +75,7 @@ export interface OfferItem {
 
 export interface WebsiteSections {
   hero: { ctaPrimary: string; ctaSecondary: string };
-  about: { eyebrow: string; storyNote: string; yearsLabel: string };
+  about: { eyebrow: string; storyNote: string; yearsLabel: string; heading: string; body: string; imageUrl: string };
   services: SectionHeadingCopy;
   signature: SectionHeadingCopy;
   beforeAfter: SectionHeadingCopy;

@@ -56,7 +56,7 @@ export interface SectionHeadingCopy {
 
 export interface WebsiteSections {
   hero: { ctaPrimary: string; ctaSecondary: string };
-  about: { eyebrow: string; storyNote: string; yearsLabel: string };
+  about: { eyebrow: string; storyNote: string; yearsLabel: string; heading: string; body: string; imageUrl: string };
   services: SectionHeadingCopy;
   signature: SectionHeadingCopy;
   beforeAfter: SectionHeadingCopy;
@@ -259,6 +259,9 @@ const salonSchema: Schema = new mongoose.Schema(
         eyebrow: { type: String, default: 'Our Story' },
         storyNote: { type: String, default: 'இங்கு ஒவ்வொரு நாற்காலியும் ஒரு கதைசொல்லி. உன் வருகை அதன் அடுத்த அத்தியாயம்.' },
         yearsLabel: { type: String, default: 'Years of Craft' },
+        heading: { type: String, default: '' },
+        body: { type: String, default: '' },
+        imageUrl: { type: String, default: '' },
       },
       services: {
         eyebrow: { type: String, default: 'SERVICES' },

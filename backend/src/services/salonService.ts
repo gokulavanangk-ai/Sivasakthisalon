@@ -32,6 +32,9 @@ export const DEFAULT_SECTIONS: WebsiteSections = {
     eyebrow: 'Our Story',
     storyNote: 'இங்கு ஒவ்வொரு நாற்காலியும் ஒரு கதைசொல்லி. உன் வருகை அதன் அடுத்த அத்தியாயம்.',
     yearsLabel: 'Years of Craft',
+    heading: '',
+    body: '',
+    imageUrl: '',
   },
   services: {
     eyebrow: 'SERVICES',

@@ -76,6 +76,21 @@ export const SECTIONS: SectionMeta[] = [
     ],
   },
   {
+    key: 'story',
+    label: 'Story (About on Home)',
+    tamil: 'கதை',
+    description: 'Heading, body, image, eyebrow, story note and years label shown in the home page story section. Dedicated About page content is managed from the About tab.',
+    savePaths: ['sections'],
+    fields: [
+      { key: 'sections.about.heading', label: 'Heading (Tamil)', type: 'textarea', full: true },
+      { key: 'sections.about.body', label: 'Body text (Tamil)', type: 'textarea', full: true },
+      { key: 'sections.about.eyebrow', label: 'Eyebrow label', type: 'text' },
+      { key: 'sections.about.storyNote', label: 'Story note (Tamil)', type: 'textarea', full: true },
+      { key: 'sections.about.yearsLabel', label: 'Years badge label', type: 'text' },
+      { key: 'sections.about.imageUrl', label: 'Image', type: 'text', isImage: true, full: true },
+    ],
+  },
+  {
     key: 'services',
     label: 'Services',
     tamil: 'சேவைகள்',

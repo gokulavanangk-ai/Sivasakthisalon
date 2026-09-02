@@ -7,11 +7,11 @@ export function StorySection() {
   const { data: salon } = useSalon();
   const bi = businessInfoOf(salon);
   const years = bi.experienceYears || 0;
-  const heading = salon?.about?.heading || `${years} ஆண்டுகளின் அனுபவம். ஒரே நோக்கம்.`;
+  const heading = salon?.sections?.about?.heading || `${years} ஆண்டுகளின் அனுபவம். ஒரே நோக்கம்.`;
   const body =
-    salon?.about?.body ||
+    salon?.sections?.about?.body ||
     `${years} ஆண்டுகளாக, தோற்றத்தை மட்டும் மாற்றாமல், ஒவ்வொரு வாடிக்கையாளரின் தனித்துவத்தையும் அவர்களின் ஸ்டைலாக மாற்றி வருகிறோம்.`;
-  const imageUrl = salon?.about?.imageUrl;
+  const imageUrl = salon?.sections?.about?.imageUrl || salon?.about?.imageUrl;
   const eyebrow = salon?.sections?.about?.eyebrow ?? 'Our Story';
   const storyNote = salon?.sections?.about?.storyNote ?? 'இங்கு ஒவ்வொரு நாற்காலியும் ஒரு கதைசொல்லி. உன் வருகை அதன் அடுத்த அத்தியாயம்.';
   const yearsLabel = salon?.sections?.about?.yearsLabel ?? 'Years of Craft';

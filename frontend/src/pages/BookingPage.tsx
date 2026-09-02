@@ -32,7 +32,7 @@ export default function BookingPage() {
         />
       </div>
 
-      <div className="container-x grid gap-12 lg:grid-cols-[1fr_360px]">
+      <div className="container-x grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]">
         <Reveal>
           <Suspense>
             <BookingForm />
@@ -40,13 +40,13 @@ export default function BookingPage() {
         </Reveal>
 
         <aside className="space-y-5 lg:pt-4">
-          <div className="card p-6">
+          <div className="card p-5 sm:p-6">
             <p className="eyebrow mb-4">Contact</p>
             <ul className="space-y-3 text-sm">
               <li className="flex items-center gap-3 text-muted">
-                <Phone className="h-4 w-4 text-gold" />
+                <Phone className="h-4 w-4 shrink-0 text-gold" />
                 {bi.phone ? (
-                  <a href={`tel:+91${bi.phone}`} className="hover:text-cream">
+                  <a href={`tel:+91${bi.phone}`} className="break-all hover:text-cream">
                     {formatPhone(bi.phone)}
                   </a>
                 ) : (
@@ -54,7 +54,7 @@ export default function BookingPage() {
                 )}
               </li>
               <li className="flex items-center gap-3 text-muted">
-                <MessageCircle className="h-4 w-4 text-gold" />
+                <MessageCircle className="h-4 w-4 shrink-0 text-gold" />
                 {whatsappLink(bi.whatsapp) ? (
                   <a href={whatsappLink(bi.whatsapp)} target="_blank" rel="noopener noreferrer" className="hover:text-cream">
                     WhatsApp
@@ -65,23 +65,23 @@ export default function BookingPage() {
               </li>
               <li className="flex items-start gap-3 text-muted">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
-                <span>{bi.address}</span>
+                <span className="min-w-0">{bi.address}</span>
               </li>
             </ul>
           </div>
 
-          <div className="card p-6">
+          <div className="card p-5 sm:p-6">
             <p className="eyebrow mb-4">Opening Hours</p>
             {hours ? (
               <ul className="space-y-2 text-sm">
                 {Object.entries(hours.workingHours).map(([day, h]) => (
                   <li key={day} className="flex items-center justify-between gap-3">
-                    <span className={h.isOpen ? 'text-cream/80' : 'text-muted/50'}>{WEEK_LABELS[day]}</span>
-                    <span className="flex items-center gap-1.5 text-muted">
+                    <span className={h.isOpen ? 'shrink-0 text-cream/80' : 'shrink-0 text-muted/50'}>{WEEK_LABELS[day]}</span>
+                    <span className="flex items-center gap-1.5 text-right text-muted">
                       {h.isOpen ? (
                         <>
-                          <Clock className="h-3.5 w-3.5 text-gold" />
-                          {h.open.slice(0, 5)} – {h.close.slice(0, 5)}
+                          <Clock className="h-3.5 w-3.5 shrink-0 text-gold" />
+                          <span className="whitespace-nowrap">{h.open.slice(0, 5)} – {h.close.slice(0, 5)}</span>
                         </>
                       ) : (
                         <span className="text-muted/50">Closed</span>
@@ -95,7 +95,7 @@ export default function BookingPage() {
             )}
           </div>
 
-          <div className="card border-gold/25 bg-gold/[0.04] p-6">
+          <div className="card border-gold/25 bg-gold/[0.04] p-5 sm:p-6">
             <p className="font-tamil text-lg text-cream">{bi.taglineTamil}</p>
             <p className="mt-2 text-sm text-muted">
               Arriving at your confirmed time means minimal waiting and your favourite barber ready for you.

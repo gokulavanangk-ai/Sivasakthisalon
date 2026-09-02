@@ -153,14 +153,14 @@ export function BookingForm() {
       <div className="card p-8 text-center">
         <p className="font-tamil text-xl text-cream">Online booking is temporarily unavailable.</p>
         <p className="mt-2 text-sm text-muted">Kindly call or WhatsApp us to reserve your slot.</p>
-        <div className="mt-6 flex justify-center gap-3">
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
           {bi.phone && (
-            <a href={`tel:+91${bi.phone}`} className="btn-primary">
+            <a href={`tel:+91${bi.phone}`} className="btn-primary w-full sm:w-auto">
               <Phone className="h-4 w-4" /> Call Now
             </a>
           )}
           {waLink && (
-            <a href={waLink} target="_blank" rel="noopener noreferrer" className="btn-ghost">
+            <a href={waLink} target="_blank" rel="noopener noreferrer" className="btn-ghost w-full sm:w-auto">
               <MessageCircle className="h-4 w-4" /> WhatsApp Us
             </a>
           )}
@@ -199,9 +199,9 @@ export function BookingForm() {
                     : 'border-line bg-ink-800 hover:border-gold/40',
                 )}
               >
-                <span>
-                  <span className="block font-sans text-base font-medium text-cream">{s.englishName}</span>
-                  <span className="block font-tamil text-sm text-gold/80">{s.tamilName}</span>
+                <span className="min-w-0">
+                  <span className="block break-words font-sans text-base font-medium text-cream">{s.englishName}</span>
+                  <span className="block break-words font-tamil text-sm text-gold/80">{s.tamilName}</span>
                 </span>
                 <input
                   type="radio"
@@ -209,7 +209,7 @@ export function BookingForm() {
                   value={s._id}
                   className="sr-only"
                 />
-                <CheckCircle2 className={cn('h-5 w-5', watch('serviceId') === s._id ? 'text-gold' : 'text-muted/30')} />
+                <CheckCircle2 className={cn('h-5 w-5 shrink-0', watch('serviceId') === s._id ? 'text-gold' : 'text-muted/30')} />
               </label>
             ))}
           </div>
@@ -255,7 +255,7 @@ export function BookingForm() {
         {!hours ? (
           <LoadingSpinner label="Loading hours" />
         ) : (
-          <div className="flex gap-2 overflow-x-auto pb-2">
+          <div className="flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {dates.map((d) => (
               <button
                 key={d.key}
@@ -263,7 +263,7 @@ export function BookingForm() {
                 disabled={d.isClosed}
                 onClick={() => setValue('date', d.key, { shouldValidate: true })}
                 className={cn(
-                  'flex w-[74px] shrink-0 flex-col items-center rounded-md border px-2 py-3 transition-colors',
+                  'flex w-[74px] shrink-0 snap-start flex-col items-center rounded-md border px-2 py-3 transition-colors',
                   d.isClosed && 'cursor-not-allowed opacity-30',
                   !d.isClosed && selectedDate === d.key && 'border-gold bg-gold/10 text-cream',
                   !d.isClosed && selectedDate !== d.key && 'border-line bg-ink-800 hover:border-gold/40',
@@ -272,8 +272,8 @@ export function BookingForm() {
                 <span className={cn('text-[10px] uppercase tracking-widest', d.isToday && 'text-gold')}>
                   {d.isToday ? 'Today' : d.weekday}
                 </span>
-                <span className="mt-1 font-tamil text-xl text-cream">{d.dayNum}</span>
-                <span className="text-[10px] text-muted">{d.month}</span>
+                <span className="mt-1 font-tamil text-xl leading-none text-cream">{d.dayNum}</span>
+                <span className="mt-1 text-[10px] text-muted">{d.month}</span>
               </button>
             ))}
           </div>
@@ -297,7 +297,7 @@ export function BookingForm() {
             <EmptyState title="No slots available on this day" body="Please pick another date." />
           ) : (
             <>
-              <p className="mb-3 flex items-center gap-4 text-xs text-muted">
+              <p className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-gold" /> Available
                 </span>
@@ -364,11 +364,11 @@ export function BookingForm() {
         <div className="rounded-md border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm text-red-300">{submitError}</div>
       )}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <button type="submit" disabled={submitting} className="btn-primary disabled:cursor-not-allowed disabled:opacity-60">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <button type="submit" disabled={submitting} className="btn-primary w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-60">
           {submitting ? 'Booking…' : 'Book Your Style'}
         </button>
-        <p className="text-xs text-muted">No advance payment. We will confirm your slot by phone.</p>
+        <p className="max-w-xs text-xs text-muted sm:max-w-none">No advance payment. We will confirm your slot by phone.</p>
       </div>
     </form>
   );
@@ -381,22 +381,22 @@ function MotionConfirm({ confirmed, phone, waLink, onBack }: { confirmed: Confir
       animate={{ opacity: 1, y: 0 }}
       className="card mx-auto max-w-lg overflow-hidden"
     >
-      <div className="bg-gradient-to-br from-gold/20 via-ink-900 to-ink-900 px-8 pt-10 text-center">
+      <div className="bg-gradient-to-br from-gold/20 via-ink-900 to-ink-900 px-6 pt-10 text-center sm:px-8">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-gold/60 bg-gold/10">
           <CheckCircle2 className="h-8 w-8 text-gold" />
         </div>
-        <h3 className="mt-6 font-tamil text-3xl text-cream">Appointment Request Received</h3>
+        <h3 className="mt-6 font-tamil text-2xl text-cream sm:text-3xl">Appointment Request Received</h3>
         <p className="mt-2 text-sm text-muted">Your request is in — here is your reference.</p>
       </div>
-      <div className="px-8 pb-8 pt-6">
+      <div className="px-6 pb-8 pt-6 sm:px-8">
         <div className="rounded-md border border-line bg-ink-800/60 p-4 text-center">
           <p className="text-[10px] uppercase tracking-widest text-muted">Booking ID</p>
-          <p className="mt-1 font-mono text-xl tracking-wide text-gold">{confirmed.bookingId}</p>
+          <p className="mt-1 break-all font-mono text-xl tracking-wide text-gold">{confirmed.bookingId}</p>
         </div>
         <dl className="mt-5 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
           <div className="rounded-md border border-line bg-ink-800/40 px-4 py-3">
             <dt className="text-[10px] uppercase tracking-widest text-muted">Service</dt>
-            <dd className="mt-1 text-cream">{confirmed.service}</dd>
+            <dd className="mt-1 break-words text-cream">{confirmed.service}</dd>
           </div>
           <div className="rounded-md border border-line bg-ink-800/40 px-4 py-3">
             <dt className="text-[10px] uppercase tracking-widest text-muted">Date</dt>
@@ -418,11 +418,11 @@ function MotionConfirm({ confirmed, phone, waLink, onBack }: { confirmed: Confir
         <p className="mt-5 text-center text-sm leading-relaxed text-muted">
           Our team will confirm your slot by phone shortly. No advance payment needed — pay after your service.
         </p>
-        <div className="mt-7 flex justify-center gap-3">
-          <a href={`tel:+91${phone}`} className="btn-primary">
+        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <a href={`tel:+91${phone}`} className="btn-primary w-full sm:w-auto">
             <Phone className="h-4 w-4" /> Call Now
           </a>
-          <a href={waLink} target="_blank" rel="noopener noreferrer" className="btn-ghost">
+          <a href={waLink} target="_blank" rel="noopener noreferrer" className="btn-ghost w-full sm:w-auto">
             <MessageCircle className="h-4 w-4" /> WhatsApp
           </a>
         </div>
