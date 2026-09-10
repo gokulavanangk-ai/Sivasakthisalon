@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowDown, ArrowUpRight } from 'lucide-react';
 import { useSalon } from '@/hooks/useContent';
-import { useScrollProgress } from '@/hooks/useScrollProgress';
+import { ScrollProgressBar } from '@/hooks/useScrollProgress';
 import { Magnetic } from '@/components/shared/Magnetic';
 import { SmartImage } from '@/components/shared/SmartImage';
 import { businessInfoOf, resolveHeroMedia } from '@/lib/utils';
@@ -12,7 +12,6 @@ const ASCENT_GREY =
 
 export function HeroSection() {
   const { data: salon } = useSalon();
-  const progress = useScrollProgress();
   const reduced = useReducedMotion();
   const [videoFailed, setVideoFailed] = useState(false);
 
@@ -167,11 +166,7 @@ export function HeroSection() {
       </motion.div>
 
       {/* Scroll progress indicator */}
-      <div
-        className="fixed left-0 top-0 z-40 h-0.5 bg-gold"
-        style={{ width: `${progress * 100}%` }}
-        aria-hidden="true"
-      />
+      <ScrollProgressBar />
     </section>
   );
 }

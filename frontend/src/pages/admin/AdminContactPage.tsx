@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { useSalon, useBusinessHours } from '@/hooks/useContent';
 import { useSettingsMutations } from '@/features/admin/mutations';
 import { AdminCard, Toggle } from '@/features/admin/ui';
+import { MapSkeleton } from '@/components/ui/Feedback';
 import { Save, RotateCcw, AlertTriangle } from 'lucide-react';
-import LeafletMap, {
+import {
   DEFAULT_LATITUDE,
   DEFAULT_LONGITUDE,
   isValidLatitude,
@@ -11,6 +12,8 @@ import LeafletMap, {
   isValidCoordinate,
 } from '@/components/shared/LeafletMap';
 import type { BusinessHours, DayHours, SalonSettings, WeekDay } from '@/types';
+
+const LeafletMap = lazy(() => import('@/components/shared/LeafletMap'));
 
 const WEEK_DAYS: { key: WeekDay; label: string; tamil: string }[] = [
   { key: 'monday', label: 'Monday', tamil: 'திங்கள்' },
@@ -225,14 +228,16 @@ export default function AdminContactPage() {
             )}
 
             <div className="col-span-2">
-              <LeafletMap
-                latitude={latitude}
-                longitude={longitude}
-                draggable
-                onLocationChange={handleLocationChange}
-                className="h-[360px] w-full overflow-hidden rounded-md border border-white/10"
-                popupText={form.businessInfo?.address || 'Salon location'}
-              />
+              <Suspense fallback={<MapSkeleton className="h-[360px]" />}>
+                <LeafletMap
+                  latitude={latitude}
+                  longitude={longitude}
+                  draggable
+                  onLocationChange={handleLocationChange}
+                  className="h-[360px] w-full overflow-hidden rounded-md border border-white/10"
+                  popupText={form.businessInfo?.address || 'Salon location'}
+                />
+              </Suspense>
               <p className="mt-2 text-[11px] text-zinc-600">
                 Drag the marker or click anywhere on the map to set the exact location.
               </p>

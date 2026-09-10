@@ -1,27 +1,21 @@
 import { Link } from 'react-router-dom';
 import { Clock } from 'lucide-react';
-import { useServices } from '@/hooks/useContent';
+import { useServices, useSalon } from '@/hooks/useContent';
 import { Reveal } from '@/components/shared/Reveal';
 import { SectionHeading } from '@/components/shared/SectionHeading';
-import { ErrorMessage, LoadingSpinner, EmptyState } from '@/components/ui/Feedback';
-import { useSalon } from '@/hooks/useContent';
+import { ErrorMessage, EmptyState, ServicesSkeleton } from '@/components/ui/Feedback';
 
 export function ServicesSection() {
-  const { data, isLoading, error } = useServices();
+  const { data, isLoading, error, refetch } = useServices();
   const { data: salon } = useSalon();
   const pricingVisible = salon?.toggles?.pricingVisible === true;
 
-  if (isLoading) return <LoadingSpinner label="Loading services" />;
-  if (error) {
-    return (
-      <div className="container-x py-16">
-        <ErrorMessage message="Could not load our services." />
-      </div>
-    );
-  }
-
   const services = data?.items ?? [];
-  const heading = salon?.sections?.services ?? { eyebrow: 'SERVICES', englishTitle: 'What we do', title: 'உனக்கான Style. உனக்கான கதை.' };
+  const heading = salon?.sections?.services ?? {
+    eyebrow: 'SERVICES',
+    englishTitle: 'What we do',
+    title: 'உனக்கான Style. உனக்கான கதை.',
+  };
 
   return (
     <section className="container-x py-24 lg:py-28" id="services">
@@ -31,7 +25,14 @@ export function ServicesSection() {
         title={heading.title}
       />
 
-      {services.length === 0 ? (
+      {isLoading ? (
+        <ServicesSkeleton count={4} />
+      ) : error ? (
+        <ErrorMessage
+          message="Could not load our services."
+          onRetry={() => refetch()}
+        />
+      ) : services.length === 0 ? (
         <EmptyState title="Services will be listed here soon." />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

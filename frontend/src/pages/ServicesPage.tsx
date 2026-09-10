@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom';
 import { useServices, useSalon } from '@/hooks/useContent';
 import { SectionHeading } from '@/components/shared/SectionHeading';
 import { Reveal } from '@/components/shared/Reveal';
-import { ErrorMessage, LoadingSpinner, EmptyState } from '@/components/ui/Feedback';
+import { ErrorMessage, EmptyState, ServicesSkeleton } from '@/components/ui/Feedback';
 import { CtaSection } from '@/features/home/CtaSection';
 
 export default function ServicesPage() {
-  const { data, isLoading, error } = useServices();
+  const { data, isLoading, error, refetch } = useServices();
   const { data: salon } = useSalon();
   const pricingVisible = salon?.toggles?.pricingVisible === true;
 
@@ -23,9 +23,12 @@ export default function ServicesPage() {
 
       <div className="container-x">
         {isLoading ? (
-          <LoadingSpinner />
+          <ServicesSkeleton count={6} />
         ) : error ? (
-          <ErrorMessage message="Could not load our services." />
+          <ErrorMessage
+            message="Could not load our services."
+            onRetry={() => refetch()}
+          />
         ) : (data?.items ?? []).length === 0 ? (
           <EmptyState title="Services will be listed here soon." />
         ) : (

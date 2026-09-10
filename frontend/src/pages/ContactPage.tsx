@@ -1,11 +1,16 @@
+import { lazy, Suspense } from 'react';
 import { Phone, MessageCircle, Instagram, Facebook, Youtube, MapPin, Navigation } from 'lucide-react';
 import { useSalon, useBusinessHours } from '@/hooks/useContent';
 import { SectionHeading } from '@/components/shared/SectionHeading';
 import { Reveal } from '@/components/shared/Reveal';
+import { MapSkeleton } from '@/components/ui/Feedback';
 import { whatsappLink, instagramLink } from '@/constants';
 import { formatPhone, businessInfoOf, isValidDirectionsUrl } from '@/lib/utils';
-import LeafletMap, { DEFAULT_LATITUDE, DEFAULT_LONGITUDE } from '@/components/shared/LeafletMap';
 import { FaqSection } from '@/features/faq/FaqSection';
+
+const LeafletMap = lazy(() => import('@/components/shared/LeafletMap'));
+const DEFAULT_LATITUDE = 9.5919;
+const DEFAULT_LONGITUDE = 77.9732;
 
 const WEEK_LABELS: Record<string, string> = {
   monday: 'Monday',
@@ -126,12 +131,14 @@ export default function ContactPage() {
       <div className="container-x mt-14">
         <Reveal>
           <div className="relative overflow-hidden rounded-md border border-line">
-            <LeafletMap
-              latitude={latitude}
-              longitude={longitude}
-              scrollWheelZoom
-              popupText={`${bi.salonName || 'Salon'} — ${bi.address || ''}`}
-            />
+            <Suspense fallback={<MapSkeleton />}>
+              <LeafletMap
+                latitude={latitude}
+                longitude={longitude}
+                scrollWheelZoom
+                popupText={`${bi.salonName || 'Salon'} — ${bi.address || ''}`}
+              />
+            </Suspense>
             <div className="pointer-events-none absolute inset-0 border border-line/40" />
           </div>
         </Reveal>

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useHairstyles } from '@/hooks/useContent';
 import { SectionHeading } from '@/components/shared/SectionHeading';
 import { SmartImage } from '@/components/shared/SmartImage';
-import { ErrorMessage, LoadingSpinner, EmptyState } from '@/components/ui/Feedback';
+import { ErrorMessage, EmptyState, HairstylesSkeleton } from '@/components/ui/Feedback';
 import { StyleFinder } from '@/features/styleFinder/StyleFinder';
 import { ComboBuilder } from '@/features/styleFinder/ComboBuilder';
 import { HAIRSTYLE_CATEGORY_LABELS } from '@/constants';
@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { CtaSection } from '@/features/home/CtaSection';
 
 export default function StylesPage() {
-  const { data: hairstyles = [], isLoading, error } = useHairstyles();
+  const { data: hairstyles = [], isLoading, error, refetch } = useHairstyles();
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
   const categories = useMemo(
@@ -35,9 +35,12 @@ export default function StylesPage() {
 
       <div className="container-x">
         {isLoading ? (
-          <LoadingSpinner />
+          <HairstylesSkeleton count={6} />
         ) : error ? (
-          <ErrorMessage message="Styles-ஐ load செய்ய முடியவில்லை." />
+          <ErrorMessage
+            message="Styles-ஐ load செய்ய முடியவில்லை."
+            onRetry={() => refetch()}
+          />
         ) : hairstyles.length === 0 ? (
           <EmptyState title="Styles விரைவில் வரும்." />
         ) : (

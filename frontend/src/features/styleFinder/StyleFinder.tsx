@@ -6,7 +6,7 @@ import { recommendHairstyles } from '@/features/styleFinder/engine';
 import { FACE_SHAPES, STYLE_TYPES, HAIR_TYPES } from '@/constants';
 import { SectionHeading } from '@/components/shared/SectionHeading';
 import { SmartImage } from '@/components/shared/SmartImage';
-import { ErrorMessage, LoadingSpinner, EmptyState } from '@/components/ui/Feedback';
+import { ErrorMessage, EmptyState, StyleFinderSkeleton } from '@/components/ui/Feedback';
 import { cn } from '@/lib/utils';
 import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -14,7 +14,7 @@ import { Link } from 'react-router-dom';
 type Selection = FaceShape | StyleType | HairType | '';
 
 export function StyleFinder() {
-  const { data: hairstyles = [], isLoading, error } = useHairstyles();
+  const { data: hairstyles = [], isLoading, error, refetch } = useHairstyles();
   const [face, setFace] = useState<Selection>('');
   const [style, setStyle] = useState<Selection>('');
   const [hair, setHair] = useState<Selection>('');
@@ -74,10 +74,10 @@ export function StyleFinder() {
       />
 
       {isLoading ? (
-        <LoadingSpinner />
+        <StyleFinderSkeleton />
       ) : error ? (
         <div className="mx-auto max-w-md">
-          <ErrorMessage message="Could not load style options." />
+          <ErrorMessage message="Could not load style options." onRetry={() => refetch()} />
         </div>
       ) : (
         <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[1.1fr_1fr]">

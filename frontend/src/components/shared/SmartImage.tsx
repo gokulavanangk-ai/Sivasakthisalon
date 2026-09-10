@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { ImageIcon } from 'lucide-react';
 
 interface SmartImageProps {
   src?: string;
@@ -10,10 +11,10 @@ interface SmartImageProps {
   eager?: boolean;
 }
 
-const FALLBACK_IMAGE =
+const FALLBACK_SVG =
   'data:image/svg+xml;charset=utf-8,' +
   encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><rect width="800" height="600" fill="#171717"/><g fill="#3a342a"><circle cx="400" cy="230" r="70"/><rect x="310" y="330" width="180" height="230" rx="24"/></g><text x="400" y="540" font-family="serif" font-size="20" fill="#5a5245" text-anchor="middle">SIVASAKTHI MEN'S SALON</text></svg>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600"><rect width="800" height="600" fill="#141414"/><g fill="#2e2920"><circle cx="400" cy="230" r="64"/><path d="M290 490c0-60.7 49.3-110 110-110s110 49.3 110 110z"/></g><text x="400" y="540" font-family="sans-serif" font-size="16" letter-spacing="4" fill="#c8a96b" text-anchor="middle">SIVASAKTHI MEN'S SALON</text></svg>`,
   );
 
 export function SmartImage({
@@ -31,20 +32,35 @@ export function SmartImage({
   }, [src]);
 
   return (
-    <div className={cn('relative w-full overflow-hidden', aspect, className)}>
+    <div className={cn('relative w-full overflow-hidden bg-ink-800', aspect, className)}>
+      {/* Shimmer skeleton while image is loading */}
       {status === 'loading' && (
-        <div className="absolute inset-0 animate-pulse bg-ink-700" aria-hidden="true" />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 overflow-hidden bg-ink-700/80 after:absolute after:inset-0 after:-translate-x-full after:animate-shimmer after:bg-gradient-to-r after:from-transparent after:via-white/[0.04] after:to-transparent"
+        />
       )}
-      {src && (
+
+      {/* Actual image with smooth fade-in */}
+      {src ? (
         <img
-          src={status === 'error' ? FALLBACK_IMAGE : src}
+          src={status === 'error' ? FALLBACK_SVG : src}
           alt={alt}
           loading={eager ? 'eager' : 'lazy'}
           decoding="async"
           onLoad={() => setStatus('loaded')}
           onError={() => setStatus((s) => (s === 'loading' ? 'error' : s))}
-          className={cn('h-full w-full object-cover', imgClassName)}
+          className={cn(
+            'h-full w-full object-cover transition-opacity duration-500 ease-out',
+            status === 'loaded' ? 'opacity-100' : 'opacity-0',
+            imgClassName,
+          )}
         />
+      ) : (
+        <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-ink-800/80 p-4 text-center">
+          <ImageIcon className="h-6 w-6 text-muted/40" />
+          <span className="font-tamil text-xs text-muted/60">சிவசக்தி</span>
+        </div>
       )}
     </div>
   );
